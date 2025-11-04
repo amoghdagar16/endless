@@ -7,35 +7,38 @@ export default function AIConsolePage() {
   const [query, setQuery] = useState("");
   const [answer, setAnswer] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [metadata, setMetadata] = useState<{ expense_count?: number; total_amount?: number } | null>(null);
 
   const handleAsk = async () => {
     if (!query.trim()) return;
 
     setLoading(true);
+    setError("");
+    setAnswer("");
+    setMetadata(null);
+
     try {
-      // For now, fetch expenses and provide a local summary
-      // In the future, this will call /rag/query
-      const resp = await api.get<{ status: string; data: any[] }>(
-        `/expenses/company/${COMPANY_ID}`
+      const resp = await api.post<{ answer: string; expense_count: number; total_amount?: number }>(
+        "/ai/query",
+        {
+          company_id: COMPANY_ID,
+          question: query,
+        }
       );
 
-      const expenses = resp.data || [];
-      const totalExpenses = expenses.length;
-      const totalAmount = expenses.reduce((sum, exp) => sum + (exp.total_amount || 0), 0);
-
-      // Simple local "AI" response
-      const summary = `Based on your data:
-- Total expenses recorded: ${totalExpenses}
-- Total amount: $${totalAmount.toFixed(2)}
-- Average expense: $${totalExpenses > 0 ? (totalAmount / totalExpenses).toFixed(2) : "0.00"}
-
-Your query: "${query}"
-
-(Note: This is a local summary. Full RAG query integration coming soon.)`;
-
-      setAnswer(summary);
-    } catch (error: any) {
-      setAnswer(`Error: ${error.message}`);
+      setAnswer(resp.answer);
+      setMetadata({
+        expense_count: resp.expense_count,
+        total_amount: resp.total_amount,
+      });
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.detail || err.message;
+      if (errorMsg.includes("OPENAI_API_KEY")) {
+        setError("AI assistant requires OpenAI API key. Please configure OPENAI_API_KEY in your backend .env file.");
+      } else {
+        setError(`Error: ${errorMsg}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -59,43 +62,99 @@ Your query: "${query}"
               rows={3}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                  e.preventDefault();
+                  handleAsk();
+                }
+              }}
               placeholder="What is my total spending this month?"
             />
+            <p className="text-xs text-gray-500 mt-1">
+              Press Cmd/Ctrl + Enter to submit
+            </p>
           </div>
 
-          <button
-            onClick={handleAsk}
-            disabled={loading || !query.trim()}
-            className="btn btn-primary"
-          >
-            {loading ? "Thinking..." : "Ask AI"}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={handleAsk}
+              disabled={loading || !query.trim()}
+              className="btn btn-primary"
+            >
+              {loading ? "Thinking..." : "Ask AI"}
+            </button>
+            {!loading && !query && (
+              <>
+                <button
+                  onClick={() => setQuery("What's my biggest expense this month?")}
+                  className="btn btn-secondary text-xs"
+                >
+                  Quick: Biggest expense?
+                </button>
+                <button
+                  onClick={() => setQuery("Which vendor am I spending the most with?")}
+                  className="btn btn-secondary text-xs"
+                >
+                  Quick: Top vendor?
+                </button>
+                <button
+                  onClick={() => setQuery("Any suggestions to reduce my costs?")}
+                  className="btn btn-secondary text-xs"
+                >
+                  Quick: Cost savings?
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
+      {error && (
+        <div className="card bg-red-50 border-red-200">
+          <h3 className="font-semibold text-red-900 mb-2">Error</h3>
+          <p className="text-sm text-red-700">{error}</p>
+        </div>
+      )}
+
       {answer && (
         <div className="card bg-green-50 border-green-200">
-          <h3 className="font-semibold text-green-900 mb-3">AI Response</h3>
-          <div className="text-sm text-green-800 whitespace-pre-wrap">
+          <div className="flex justify-between items-start mb-3">
+            <h3 className="font-semibold text-green-900">AI Accountant Response</h3>
+            {metadata && (
+              <div className="text-xs text-green-700">
+                Based on {metadata.expense_count} expense{metadata.expense_count !== 1 ? 's' : ''}
+                {metadata.total_amount !== undefined && ` • $${metadata.total_amount.toFixed(2)} total`}
+              </div>
+            )}
+          </div>
+          <div className="text-sm text-green-800 whitespace-pre-wrap leading-relaxed">
             {answer}
           </div>
         </div>
       )}
 
       <div className="card bg-blue-50 border-blue-200">
-        <h3 className="font-semibold text-blue-900 mb-2">AI Capabilities</h3>
-        <p className="text-sm text-blue-800 mb-2">
-          The AI console can help you understand your financial data:
+        <h3 className="font-semibold text-blue-900 mb-2">Your AI Accountant Companion</h3>
+        <p className="text-sm text-blue-800 mb-3">
+          Ask me anything about your financial data! I'm powered by OpenAI and can help you:
         </p>
         <ul className="list-disc list-inside text-sm text-blue-800 space-y-1">
-          <li>Query expense trends and patterns</li>
-          <li>Get spending insights by category or vendor</li>
-          <li>Analyze financial health indicators</li>
-          <li>Receive proactive recommendations</li>
+          <li>Analyze spending patterns and trends</li>
+          <li>Identify top vendors and categories</li>
+          <li>Get insights on cost-saving opportunities</li>
+          <li>Understand cash flow and budget allocation</li>
+          <li>Receive personalized financial recommendations</li>
         </ul>
-        <p className="text-xs text-blue-700 mt-3">
-          Note: Currently showing local summaries. Full RAG integration with vector search coming soon.
-        </p>
+        <div className="mt-4 pt-4 border-t border-blue-300">
+          <p className="text-xs text-blue-700 font-medium mb-2">Example questions:</p>
+          <ul className="text-xs text-blue-600 space-y-1">
+            <li>• "What's my biggest expense category this month?"</li>
+            <li>• "Which vendor am I spending the most with?"</li>
+            <li>• "Are my expenses trending up or down?"</li>
+            <li>• "What's my average daily spending?"</li>
+            <li>• "Any suggestions to reduce costs?"</li>
+          </ul>
+        </div>
       </div>
     </div>
   );
