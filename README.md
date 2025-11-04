@@ -1,37 +1,85 @@
-# AI Financial Companion — Backend (FastAPI + Supabase)
+# AI Financial Companion (MiniBooks)
 
-This is the backend for **Endless Moments LLC’s AI Financial Companion App**.  
-It connects a **FastAPI** backend with **Supabase (PostgreSQL)** to manage companies, users, and financial data —
-laying the foundation for future AI features like journal automation, OCR receipt reading, and financial insights.
+**Full-stack QuickBooks/NetSuite-style financial management platform with AI oversight.**
+
+This repository contains:
+- **Backend**: FastAPI + Supabase for financial data management
+- **Frontend**: Next.js + Tailwind CSS for the user interface
+- **AI Integration**: OpenAI for expense validation, categorization, and insights
+- **Smart Parser**: EasyOCR for receipt parsing from images/PDFs
+
+## Quick Start
+
+### Backend Setup
+```bash
+pip install -r requirements.txt
+cp .env.example .env
+# Edit .env with your Supabase and OpenAI credentials
+uvicorn main:app --reload
+```
+
+### Frontend Setup
+```bash
+cd frontend
+npm install
+cp .env.local.example .env.local
+# Edit .env.local with your API base URL and company ID
+npm run dev
+```
+
+See detailed setup instructions below.
 
 ---
 
 ## ⚙️ Tech Stack
 
-- **FastAPI** – Python web framework for APIs  
-- **Supabase** – PostgreSQL database + authentication  
-- **Uvicorn** – ASGI web server for FastAPI  
-- **python-dotenv** – Manages environment variables  
-- **Supabase Python SDK** – Database queries and joins  
-- **EasyOCR** – Deep learning-based OCR for text extraction  
-- **Pillow** – Image processing library  
-- **PyPDF** – PDF document handling  
+### Backend
+- **FastAPI** – Python web framework for APIs
+- **Supabase** – PostgreSQL database + authentication
+- **Uvicorn** – ASGI web server for FastAPI
+- **python-dotenv** – Manages environment variables
+- **Supabase Python SDK** – Database queries and joins
+- **EasyOCR** – Deep learning-based OCR for text extraction
+- **Pillow** – Image processing library
+- **PyPDF** – PDF document handling
+- **OpenAI** – AI-powered expense validation and categorization
+
+### Frontend
+- **Next.js 14** – React framework with App Router
+- **TypeScript** – Type-safe JavaScript
+- **Tailwind CSS** – Utility-first CSS framework
+- **Axios** – HTTP client for API calls
+- **Recharts** – Charting library for visualizations  
 
 ---
 
 ## 📁 Project Structure
 
 ```
-main.py
-database.py
-smart_parser.py
-requirements.txt
-.env
-/routes
-    ├── users.py
-    ├── companies.py
-    ├── expenses.py
-    └── parser.py
+/                           # Backend (FastAPI)
+├── main.py                 # FastAPI app entry point
+├── database.py             # Supabase connection
+├── smart_parser.py         # OCR text extraction logic
+├── requirements.txt        # Python dependencies
+├── .env.example           # Environment template
+└── /routes
+    ├── users.py           # User endpoints
+    ├── companies.py       # Company endpoints
+    ├── expenses.py        # Expense tracking
+    ├── parser.py          # Receipt parsing
+    └── ai_overlook.py     # AI validation & suggestions
+
+/frontend                   # Frontend (Next.js)
+├── /app                   # Next.js app router
+│   ├── layout.tsx         # Root layout
+│   ├── page.tsx           # Dashboard
+│   ├── /expenses          # Expense management
+│   ├── /journals          # Journal entries
+│   ├── /documents         # Receipt parser
+│   └── /ai                # AI console
+├── /components            # Reusable UI components
+├── /lib                   # Utilities (API client)
+└── package.json           # Frontend dependencies
 ```
 
 ### What each file does
@@ -166,6 +214,42 @@ curl -X POST http://localhost:8000/parse/ -F "file=@receipt.png"
 
 ---
 
+### 🤖 AI Overlook (`/ai`)
+| Method | Endpoint | Description |
+|--------|-----------|-------------|
+| POST | `/ai/overlook_expense` | AI-powered expense validation and suggestions |
+| GET | `/status/healthz` | System health check including OpenAI status |
+
+**Example Request:**
+```json
+{
+  "company_id": "uuid",
+  "vendor_name": "Office Depot",
+  "amount": 125.50,
+  "date": "2025-11-04",
+  "category": "Office Supplies",
+  "memo": "Printer paper"
+}
+```
+
+**Example Response:**
+```json
+{
+  "valid": true,
+  "issues": [],
+  "suggestions": {
+    "normalized_vendor": "Office Depot",
+    "category": "Office Supplies",
+    "memo": "Office Depot expense"
+  },
+  "json_patch": { /* same as suggestions */ }
+}
+```
+
+> **Note:** Requires `OPENAI_API_KEY` in `.env`. Falls back to rule-based suggestions if not configured.
+
+---
+
 ## 🧩 Example
 
 ### Create a new user linked to a company
@@ -186,17 +270,34 @@ curl -X POST http://localhost:8000/parse/ -F "file=@receipt.png"
 
 ## 💡 Notes
 
-- Backend uses the **Service Role key** — only for secure backend environments.  
-- Database joins use **Supabase's PostgREST** syntax like `select("*, users(full_name, email)")`.  
+- Backend uses the **Service Role key** — only for secure backend environments.
+- Database joins use **Supabase's PostgREST** syntax like `select("*, users(full_name, email)")`.
 - **Receipt parser** uses EasyOCR to extract text from images and PDFs with smart field parsing.
 - **Expense tracking** automatically creates vendors, bills, and journal entries for proper double-entry accounting.
-- API is modular and ready to scale — receipt parsing and expense automation are fully integrated!  
+- **AI oversight** uses OpenAI for expense validation, categorization, and normalization.
+- **Frontend** provides QuickBooks/NetSuite-style interface with real-time AI suggestions.
+- API is modular and ready to scale — receipt parsing and expense automation are fully integrated!
+
+---
+
+## 🎨 Frontend Features
+
+The Next.js frontend (`/frontend`) provides:
+
+- **Dashboard**: KPIs, monthly spending insights, system health monitoring
+- **Expenses**: Create expenses with AI-powered suggestions and validation
+- **Parser**: Upload receipts (PNG/JPG/PDF/CSV) and auto-extract fields
+- **Journals**: View double-entry journal records (auto-created from expenses)
+- **AI Console**: Natural language queries about financial data
+
+**Frontend runs on:** http://localhost:3000
+**See:** `/frontend/README.md` for detailed setup instructions
 
 ---
 
 ## 👨‍💻 Author
-Endless Moments LLC  
+Endless Moments LLC
 
 ---
 
-🧱 _Built with FastAPI + Supabase for a future-ready AI accounting platform._
+🧱 _Built with FastAPI + Supabase + Next.js + OpenAI for a future-ready AI accounting platform._
