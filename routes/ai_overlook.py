@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 import os
 from datetime import datetime
+from database import table
 
 router = APIRouter(prefix="/ai", tags=["AI Overlook"])
 
@@ -135,3 +136,127 @@ def overlook_expense(expense_data: dict):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing expense: {str(e)}")
+
+
+@router.post("/query")
+def ai_query(query_data: dict):
+    """
+    AI-powered financial assistant that answers questions about your expenses.
+    Acts as a helpful, friendly accountant companion.
+    """
+    try:
+        company_id = query_data.get("company_id")
+        question = query_data.get("question", "").strip()
+
+        if not company_id:
+            raise HTTPException(status_code=400, detail="company_id is required")
+
+        if not question:
+            raise HTTPException(status_code=400, detail="question is required")
+
+        # Check for OpenAI key
+        openai_key = os.getenv("OPENAI_API_KEY", "")
+        if not openai_key:
+            raise HTTPException(
+                status_code=503,
+                detail="AI assistant requires OPENAI_API_KEY to be configured. Please add it to your .env file."
+            )
+
+        # Fetch expense data for the company
+        try:
+            expenses_resp = table("bills").select("*, vendors(name)").eq("company_id", company_id).execute()
+            expenses = expenses_resp.data or []
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error fetching expense data: {str(e)}")
+
+        # Prepare expense summary for AI
+        if not expenses:
+            return {
+                "answer": "I don't see any expenses recorded yet for your company. Once you start recording expenses, I'll be able to help you analyze your spending patterns, identify trends, and answer questions about your financial data!",
+                "expense_count": 0
+            }
+
+        # Build a concise summary of expenses for the AI
+        total_amount = sum(exp.get("total_amount", 0) for exp in expenses)
+        expense_count = len(expenses)
+
+        # Group by vendor
+        vendor_totals = {}
+        for exp in expenses:
+            vendor = exp.get("vendors", {}).get("name", "Unknown") if exp.get("vendors") else "Unknown"
+            amount = exp.get("total_amount", 0)
+            vendor_totals[vendor] = vendor_totals.get(vendor, 0) + amount
+
+        # Recent expenses (last 10)
+        recent_expenses = expenses[-10:] if len(expenses) > 10 else expenses
+
+        # Build context for AI
+        context = f"""Company Expense Data Summary:
+- Total Expenses: {expense_count}
+- Total Amount: ${total_amount:.2f}
+- Average Expense: ${total_amount/expense_count:.2f}
+
+Top Vendors by Spending:
+"""
+        # Add top 5 vendors
+        sorted_vendors = sorted(vendor_totals.items(), key=lambda x: x[1], reverse=True)[:5]
+        for vendor, amount in sorted_vendors:
+            context += f"- {vendor}: ${amount:.2f}\n"
+
+        context += "\nRecent Expenses:\n"
+        for exp in recent_expenses:
+            vendor = exp.get("vendors", {}).get("name", "Unknown") if exp.get("vendors") else "Unknown"
+            amount = exp.get("total_amount", 0)
+            date = exp.get("bill_date", "N/A")
+            memo = exp.get("memo", "")
+            context += f"- {date}: {vendor} - ${amount:.2f}"
+            if memo:
+                context += f" ({memo})"
+            context += "\n"
+
+        # Call OpenAI
+        try:
+            from openai import OpenAI
+            client = OpenAI(api_key=openai_key)
+
+            system_prompt = """You are a helpful, friendly AI accountant companion for a small business.
+Your role is to help the user understand their financial data, identify trends, and make informed decisions.
+
+Be conversational, warm, and encouraging. Use clear language without too much jargon.
+When discussing numbers, be specific and helpful. Offer insights and suggestions when appropriate.
+
+Think of yourself as a knowledgeable friend who happens to be great with numbers and finances."""
+
+            user_prompt = f"""Based on the following expense data, please answer the user's question:
+
+{context}
+
+User's Question: {question}
+
+Provide a helpful, friendly response that directly answers their question. If you notice any interesting patterns or have helpful suggestions, feel free to mention them!"""
+
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                temperature=0.7,
+                max_tokens=500
+            )
+
+            answer = response.choices[0].message.content
+
+            return {
+                "answer": answer,
+                "expense_count": expense_count,
+                "total_amount": total_amount
+            }
+
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"OpenAI API error: {str(e)}")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing AI query: {str(e)}")
