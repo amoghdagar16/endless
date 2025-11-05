@@ -3,18 +3,25 @@ interface KpiCardProps {
   value: string | number;
   delta?: string;
   subtitle?: string;
+  icon?: React.ReactNode;
 }
 
-export default function KpiCard({ title, value, delta, subtitle }: KpiCardProps) {
+export default function KpiCard({ title, value, delta, subtitle, icon }: KpiCardProps) {
   return (
-    <div className="card">
-      <div className="text-sm font-medium text-gray-600 mb-2">{title}</div>
-      <div className="text-2xl font-bold text-gray-900">{value}</div>
-      {delta && (
-        <div className="text-xs text-gray-500 mt-1">{delta}</div>
-      )}
-      {subtitle && (
-        <div className="text-xs text-gray-500 mt-1">{subtitle}</div>
+    <div className="kpi group">
+      <div className="flex items-center justify-between">
+        <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+          {title}
+        </div>
+        {icon && <div className="text-brand-400 opacity-70 group-hover:opacity-100 transition-opacity">{icon}</div>}
+      </div>
+      <div className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-gray-100">
+        {value}
+      </div>
+      {(delta || subtitle) && (
+        <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+          {delta || subtitle}
+        </div>
       )}
     </div>
   );

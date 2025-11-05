@@ -14,14 +14,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body>
-        <div className="flex h-screen overflow-hidden">
+        <div className="flex h-screen overflow-hidden bg-bg dark:bg-neutral-900">
           <Sidebar />
-          <div className="flex-1 ml-64 flex flex-col">
+          <div className="flex-1 ml-60 flex flex-col">
             <Topbar />
-            <main className="flex-1 overflow-y-auto mt-16 p-8 bg-gray-50">
-              {children}
+            <main className="flex-1 overflow-y-auto mt-16 p-6 md:p-8">
+              <div className="max-w-7xl mx-auto">
+                {children}
+              </div>
             </main>
           </div>
         </div>
