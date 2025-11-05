@@ -44,11 +44,11 @@ export default function ExpensesPage() {
           vendor_name: draft.vendor_name || "",
           amount: draft.amount || "",
           date: draft.date || new Date().toISOString().split('T')[0],
-          category: "",
+          category: draft.category || "",
           memo: draft.memo || "",
         });
         sessionStorage.removeItem("draftExpense");
-        setMessage("Fields populated from parsed receipt!");
+        setMessage("Fields populated from AI-enhanced receipt parsing!");
       } catch (e) {
         console.error("Error parsing draft expense:", e);
       }
