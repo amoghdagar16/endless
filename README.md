@@ -297,7 +297,11 @@ The Next.js frontend (`/frontend`) provides:
 
 ## 👨‍💻 Author
 Endless Moments LLC
-
+Amogh Dagar 
+Satya Neriyanuru 
+Atiman Rohtagi 
+Ashish Kumar
+Dhruv Bhatt
 ---
 
 🧱 _Built with FastAPI + Supabase + Next.js + OpenAI for a future-ready AI accounting platform._
