@@ -3,14 +3,14 @@
 **Full-stack QuickBooks/NetSuite-style financial management platform with AI oversight.**
 
 This repository contains:
-- **Backend**: FastAPI + Supabase for financial data management
-- **Frontend**: Next.js + Tailwind CSS for the user interface
-- **AI Integration**: OpenAI for expense validation, categorization, and insights
-- **Smart Parser**: EasyOCR for receipt parsing from images/PDFs
+- **Backend**: FastAPI + Supabase for financial data management ( Satya, Atiman)
+- **Frontend**: Next.js + Tailwind CSS for the user interface (Amogh)
+- **AI Integration**: OpenAI for expense validation, categorization, and insights(Amogh)
+- **Smart Parser**: EasyOCR for receipt parsing from images/PDFs(Atiman ) 
 
 ## Quick Start
 
-### Backend Setup
+### Backend Setup (Satya)
 ```bash
 pip install -r requirements.txt
 cp .env.example .env
@@ -18,7 +18,7 @@ cp .env.example .env
 uvicorn main:app --reload
 ```
 
-### Frontend Setup
+### Frontend Setup (Amogh, ASHISH)
 ```bash
 cd frontend
 npm install
@@ -35,7 +35,7 @@ See detailed setup instructions below.
 
 ### Backend
 - **FastAPI** – Python web framework for APIs
-- **Supabase** – PostgreSQL database + authentication
+- **Supabase** – PostgreSQL database + authentication 
 - **Uvicorn** – ASGI web server for FastAPI
 - **python-dotenv** – Manages environment variables
 - **Supabase Python SDK** – Database queries and joins
