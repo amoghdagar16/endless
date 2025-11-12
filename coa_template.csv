@@ -1,0 +1,236 @@
+number,name,type,detail_type,parent_number,is_active,opening_balance,opening_balance_date
+1000,Assets,asset,group,,TRUE,,
+1100,Current Assets,asset,group,1000,TRUE,,
+1110,Cash & Cash Equivalents,asset,group,1100,TRUE,,
+1111,Petty Cash,asset,cash_on_hand,1110,TRUE,500,1/1/24
+1112,Cash on Hand,asset,cash_on_hand,1110,TRUE,2000,1/1/24
+1120,Bank Accounts,asset,group,1110,TRUE,,
+1121,Operating Account - Bank A,asset,bank,1120,TRUE,85000,1/1/24
+1122,Payroll Account,asset,bank,1120,TRUE,25000,1/1/24
+1123,Savings Account,asset,bank,1120,TRUE,15000,1/1/24
+1130,Accounts Receivable,asset,group,1100,TRUE,,
+1131,Trade Receivables,asset,ar,1130,TRUE,45000,1/1/24
+1132,Employee Advances,asset,ar,1130,TRUE,1200,1/1/24
+1133,Other Receivables,asset,ar,1130,TRUE,3200,1/1/24
+1139,Allowance for Doubtful Accounts,asset,contra_asset,1130,TRUE,-2250,1/1/24
+1140,Inventory,asset,group,1100,TRUE,,
+1141,Raw Materials,asset,inventory,1140,TRUE,28000,1/1/24
+1142,Work in Progress,asset,inventory,1140,TRUE,15000,1/1/24
+1143,Finished Goods,asset,inventory,1140,TRUE,25000,1/1/24
+1150,Prepaid Expenses,asset,group,1100,TRUE,,
+1151,Prepaid Insurance,asset,prepaid,1150,TRUE,3600,1/1/24
+1152,Prepaid Rent,asset,prepaid,1150,TRUE,6000,1/1/24
+1153,Prepaid Subscriptions,asset,prepaid,1150,TRUE,1200,1/1/24
+1160,Short-term Investments,asset,group,1100,TRUE,,
+1161,Marketable Securities,asset,investment,1160,TRUE,25000,1/1/24
+1170,Other Current Assets,asset,group,1100,TRUE,,
+1171,Interest Receivable,asset,ar,1170,TRUE,850,1/1/24
+1172,Dividends Receivable,asset,ar,1170,TRUE,1500,1/1/24
+1173,Tax Refunds Receivable,asset,ar,1170,TRUE,2300,1/1/24
+1200,Non-Current Assets,asset,group,1000,TRUE,,
+1210,"Property, Plant & Equipment",asset,group,1200,TRUE,,
+1211,Land,asset,fixed_asset,1210,TRUE,150000,1/1/24
+1212,Buildings,asset,fixed_asset,1210,TRUE,200000,1/1/24
+1213,Leasehold Improvements,asset,fixed_asset,1210,TRUE,35000,1/1/24
+1214,Machinery & Equipment,asset,fixed_asset,1210,TRUE,85000,1/1/24
+1215,Vehicles,asset,fixed_asset,1210,TRUE,45000,1/1/24
+1216,Office Furniture & Fixtures,asset,fixed_asset,1210,TRUE,25000,1/1/24
+1217,Computer Equipment,asset,fixed_asset,1210,TRUE,18000,1/1/24
+1219,Accumulated Depreciation - PPE,asset,contra_asset,1210,TRUE,-95000,1/1/24
+1220,Intangible Assets,asset,group,1200,TRUE,,
+1221,Goodwill,asset,intangible,1220,TRUE,50000,1/1/24
+1222,Patents,asset,intangible,1220,TRUE,15000,1/1/24
+1223,Trademarks,asset,intangible,1220,TRUE,8000,1/1/24
+1224,Software Licenses,asset,intangible,1220,TRUE,12000,1/1/24
+1229,Accumulated Amortization,asset,contra_asset,1220,TRUE,-8000,1/1/24
+1230,Long-term Investments,asset,group,1200,TRUE,,
+1231,Investment in Subsidiaries,asset,investment,1230,TRUE,100000,1/1/24
+1232,Long-term Securities,asset,investment,1230,TRUE,45000,1/1/24
+1240,Other Non-Current Assets,asset,group,1200,TRUE,,
+1241,Security Deposits,asset,other,1240,TRUE,5000,1/1/24
+1242,Deferred Tax Assets,asset,other,1240,TRUE,8500,1/1/24
+2000,Liabilities,liability,group,,TRUE,,
+2100,Current Liabilities,liability,group,2000,TRUE,,
+2110,Accounts Payable,liability,group,2100,TRUE,,
+2111,Trade Payables,liability,ap,2110,TRUE,32000,1/1/24
+2112,Credit Card Payables,liability,ap,2110,TRUE,4500,1/1/24
+2120,Accrued Expenses,liability,group,2100,TRUE,,
+2121,Accrued Salaries & Wages,liability,accrued,2120,TRUE,18000,1/1/24
+2122,Accrued Interest,liability,accrued,2120,TRUE,1200,1/1/24
+2123,Accrued Utilities,liability,accrued,2120,TRUE,850,1/1/24
+2124,Accrued Professional Fees,liability,accrued,2120,TRUE,2500,1/1/24
+2130,Taxes Payable,liability,group,2100,TRUE,,
+2131,Income Tax Payable,liability,ap,2130,TRUE,12500,1/1/24
+2132,Sales Tax Payable,liability,ap,2130,TRUE,3800,1/1/24
+2133,Payroll Tax Payable,liability,ap,2130,TRUE,4200,1/1/24
+2134,Property Tax Payable,liability,ap,2130,TRUE,2100,1/1/24
+2140,Employee Benefits Payable,liability,group,2100,TRUE,,
+2141,Health Insurance Payable,liability,ap,2140,TRUE,3200,1/1/24
+2142,Retirement Benefits Payable,liability,ap,2140,TRUE,5600,1/1/24
+2143,Vacation/PTO Payable,liability,ap,2140,TRUE,8900,1/1/24
+2150,Unearned Revenue,liability,group,2100,TRUE,,
+2151,Deferred Revenue,liability,deferred_revenue,2150,TRUE,15000,1/1/24
+2152,Customer Deposits,liability,deferred_revenue,2150,TRUE,7500,1/1/24
+2160,Short-term Debt,liability,group,2100,TRUE,,
+2161,Notes Payable - Short Term,liability,short_term_debt,2160,TRUE,20000,1/1/24
+2162,Current Portion of Long-term Debt,liability,current_ltdebt,2160,TRUE,25000,1/1/24
+2163,Line of Credit,liability,short_term_debt,2160,TRUE,15000,1/1/24
+2170,Other Current Liabilities,liability,group,2100,TRUE,,
+2171,Dividends Payable,liability,ap,2170,TRUE,5000,1/1/24
+2172,Other Payables,liability,other_current,2170,TRUE,3400,1/1/24
+2200,Non-Current Liabilities,liability,group,2000,TRUE,,
+2210,Long-term Debt,liability,group,2200,TRUE,,
+2211,Bank Loans - Long Term,liability,lt_debt,2210,TRUE,150000,1/1/24
+2212,Mortgage Payable,liability,lt_debt,2210,TRUE,180000,1/1/24
+2213,Bonds Payable,liability,lt_debt,2210,TRUE,100000,1/1/24
+2220,Other Long-term Liabilities,liability,group,2200,TRUE,,
+2221,Deferred Tax Liabilities,liability,other_lt,2220,TRUE,8000,1/1/24
+2222,Lease Obligations,liability,other_lt,2220,TRUE,35000,1/1/24
+2223,Pension Obligations,liability,other_lt,2220,TRUE,42000,1/1/24
+3000,Equity,equity,group,,TRUE,,
+3100,Owner's Equity,equity,group,3000,TRUE,,
+3110,Share Capital,equity,common_stock,3100,TRUE,300000,1/1/24
+3120,Preferred Stock,equity,preferred_stock,3100,TRUE,50000,1/1/24
+3130,Additional Paid-in Capital,equity,additional_paid_in,3100,TRUE,75000,1/1/24
+3140,Treasury Stock,equity,treasury_stock,3100,TRUE,-15000,1/1/24
+3200,Retained Earnings,equity,group,3000,TRUE,,
+3210,Retained Earnings - Prior Years,equity,retained_earnings,3200,TRUE,40000,1/1/24
+3220,Current Year Earnings,equity,retained_earnings,3200,TRUE,,
+3300,Other Comprehensive Income,equity,group,3000,TRUE,,
+3310,Foreign Currency Translation Reserve,equity,other,3300,TRUE,2500,1/1/24
+3320,Revaluation Reserve,equity,other,3300,TRUE,5000,1/1/24
+3400,Distributions,equity,group,3000,TRUE,,
+3410,Dividends Declared,equity,dividends,3400,TRUE,,
+3420,Owner Draws,equity,owner_draw,3400,TRUE,,
+4000,Revenue,income,group,,TRUE,,
+4100,Operating Revenue,income,group,4000,TRUE,,
+4110,Sales Revenue,income,group,4100,TRUE,,
+4111,Product Sales,income,sales,4110,TRUE,,
+4112,Service Revenue,income,service_revenue,4110,TRUE,,
+4113,Consulting Revenue,income,service_revenue,4110,TRUE,,
+4120,Sales Adjustments,income,group,4100,TRUE,,
+4121,Sales Returns & Allowances,income,sales_returns,4120,TRUE,,
+4122,Sales Discounts,income,sales_discount,4120,TRUE,,
+4130,Other Operating Revenue,income,group,4100,TRUE,,
+4131,Shipping & Handling Revenue,income,other_income,4130,TRUE,,
+4132,Rental Income,income,rental_income,4130,TRUE,,
+4133,Franchise Fees,income,other_income,4130,TRUE,,
+4200,Non-Operating Revenue,income,group,4000,TRUE,,
+4210,Interest Income,income,interest,4200,TRUE,,
+4220,Dividend Income,income,dividends,4200,TRUE,,
+4230,Gain on Sale of Assets,income,gain_loss,4200,TRUE,,
+4240,Foreign Exchange Gain,income,fx_gain,4200,TRUE,,
+4250,Other Income,income,other_income,4200,TRUE,,
+5000,Cost of Goods Sold,expense,group,,TRUE,,
+5100,Direct Costs,expense,group,5000,TRUE,,
+5110,Cost of Materials,expense,cogs,5100,TRUE,,
+5120,Direct Labor,expense,cogs,5100,TRUE,,
+5130,Manufacturing Overhead,expense,cogs,5100,TRUE,,
+5200,Inventory Adjustments,expense,group,5000,TRUE,,
+5210,Inventory Shrinkage,expense,cogs,5200,TRUE,,
+5220,Obsolete Inventory Write-off,expense,cogs,5200,TRUE,,
+5300,Freight & Delivery,expense,group,5000,TRUE,,
+5310,Freight In,expense,cogs,5300,TRUE,,
+5320,Shipping Costs,expense,cogs,5300,TRUE,,
+6000,Operating Expenses,expense,group,,TRUE,,
+6100,Sales & Marketing,expense,group,6000,TRUE,,
+6110,Personnel Costs,expense,group,6100,TRUE,,
+6111,Salaries - Sales,expense,salaries,6110,TRUE,,
+6112,Sales Commissions,expense,commission,6110,TRUE,,
+6113,Sales Bonuses,expense,bonus,6110,TRUE,,
+6114,Payroll Taxes - Sales,expense,payroll_tax,6110,TRUE,,
+6115,Benefits - Sales,expense,employee_benefits,6110,TRUE,,
+6120,Marketing & Advertising,expense,group,6100,TRUE,,
+6121,Advertising Expense,expense,advertising,6120,TRUE,,
+6122,Digital Marketing,expense,advertising,6120,TRUE,,
+6123,Trade Shows & Events,expense,conference,6120,TRUE,,
+6124,Marketing Materials,expense,advertising,6120,TRUE,,
+6125,Public Relations,expense,advertising,6120,TRUE,,
+6130,Sales Support,expense,group,6100,TRUE,,
+6131,Travel - Sales,expense,travel,6130,TRUE,,
+6132,Meals & Entertainment - Sales,expense,entertainment,6130,TRUE,,
+6133,Customer Gifts,expense,other,6130,TRUE,,
+6134,Bad Debt Expense,expense,bad_debt,6130,TRUE,,
+6200,General & Administrative,expense,group,6000,TRUE,,
+6210,Personnel Costs,expense,group,6200,TRUE,,
+6211,Salaries - Administrative,expense,salaries,6210,TRUE,,
+6212,Executive Compensation,expense,salaries,6210,TRUE,,
+6213,Payroll Taxes - Admin,expense,payroll_tax,6210,TRUE,,
+6214,Benefits - Admin,expense,employee_benefits,6210,TRUE,,
+6215,Training & Development,expense,training,6210,TRUE,,
+6216,Recruitment,expense,other,6210,TRUE,,
+6220,Occupancy Costs,expense,group,6200,TRUE,,
+6221,Rent Expense,expense,rent,6220,TRUE,,
+6222,Property Taxes,expense,tax,6220,TRUE,,
+6223,Building Maintenance,expense,maintenance,6220,TRUE,,
+6224,Building Insurance,expense,insurance,6220,TRUE,,
+6230,Office Operations,expense,group,6200,TRUE,,
+6231,Office Supplies,expense,supplies,6230,TRUE,,
+6232,Postage & Delivery,expense,postage,6230,TRUE,,
+6233,Printing & Copying,expense,supplies,6230,TRUE,,
+6234,Subscriptions & Memberships,expense,dues,6230,TRUE,,
+6240,Technology,expense,group,6200,TRUE,,
+6241,Computer Equipment < $2500,expense,supplies,6240,TRUE,,
+6242,Software Subscriptions,expense,software,6240,TRUE,,
+6243,IT Support & Maintenance,expense,maintenance,6240,TRUE,,
+6244,Internet & Hosting,expense,telephone,6240,TRUE,,
+6250,Professional Services,expense,group,6200,TRUE,,
+6251,Accounting & Audit Fees,expense,professional,6250,TRUE,,
+6252,Legal Fees,expense,legal,6250,TRUE,,
+6253,Consulting Fees,expense,professional,6250,TRUE,,
+6254,Bank Fees,expense,bank_charges,6250,TRUE,,
+6255,Merchant Fees,expense,bank_charges,6250,TRUE,,
+6260,Communication,expense,group,6200,TRUE,,
+6261,Telephone,expense,telephone,6260,TRUE,,
+6262,Mobile Phones,expense,telephone,6260,TRUE,,
+6270,Utilities,expense,group,6200,TRUE,,
+6271,Electricity,expense,utilities,6270,TRUE,,
+6272,Water & Sewage,expense,utilities,6270,TRUE,,
+6273,Gas/Heating,expense,utilities,6270,TRUE,,
+6280,Insurance,expense,group,6200,TRUE,,
+6281,General Liability Insurance,expense,insurance,6280,TRUE,,
+6282,Business Insurance,expense,insurance,6280,TRUE,,
+6283,Directors & Officers Insurance,expense,insurance,6280,TRUE,,
+6290,Other G&A Expenses,expense,group,6200,TRUE,,
+6291,Travel - Admin,expense,travel,6290,TRUE,,
+6292,Meals & Entertainment - Admin,expense,entertainment,6290,TRUE,,
+6293,Licenses & Permits,expense,dues,6290,TRUE,,
+6294,Donations & Contributions,expense,charitable,6290,TRUE,,
+6295,Miscellaneous Expenses,expense,other,6290,TRUE,,
+6300,Research & Development,expense,group,6000,TRUE,,
+6310,R&D Salaries,expense,salaries,6300,TRUE,,
+6320,R&D Materials,expense,supplies,6300,TRUE,,
+6330,R&D Equipment,expense,supplies,6300,TRUE,,
+7000,Depreciation & Amortization,expense,group,,TRUE,,
+7100,Depreciation Expense,expense,group,7000,TRUE,,
+7110,Depreciation - Buildings,expense,depreciation,7100,TRUE,,
+7120,Depreciation - Machinery & Equipment,expense,depreciation,7100,TRUE,,
+7130,Depreciation - Vehicles,expense,depreciation,7100,TRUE,,
+7140,Depreciation - Furniture & Fixtures,expense,depreciation,7100,TRUE,,
+7150,Depreciation - Computer Equipment,expense,depreciation,7100,TRUE,,
+7200,Amortization Expense,expense,group,7000,TRUE,,
+7210,Amortization - Patents,expense,amortization,7200,TRUE,,
+7220,Amortization - Trademarks,expense,amortization,7200,TRUE,,
+7230,Amortization - Software,expense,amortization,7200,TRUE,,
+7240,Amortization - Leasehold Improvements,expense,amortization,7200,TRUE,,
+8000,Other Income & Expenses,income,group,,TRUE,,
+8100,Financial Income,income,group,8000,TRUE,,
+8110,Interest Income - Bank,income,interest,8100,TRUE,,
+8120,Interest Income - Investments,income,interest,8100,TRUE,,
+8200,Financial Expenses,expense,group,,TRUE,,
+8210,Interest Expense - Bank Loans,expense,interest,8200,TRUE,,
+8220,Interest Expense - Mortgage,expense,interest,8200,TRUE,,
+8230,Interest Expense - Bonds,expense,interest,8200,TRUE,,
+8240,Interest Expense - Other,expense,interest,8200,TRUE,,
+8300,Other Non-Operating Items,expense,group,,TRUE,,
+8310,Loss on Sale of Assets,expense,gain_loss,8300,TRUE,,
+8320,Impairment Losses,expense,other,8300,TRUE,,
+8330,Foreign Exchange Loss,expense,fx_loss,8300,TRUE,,
+8340,Other Non-Operating Expenses,expense,other,8300,TRUE,,
+9000,Tax Expense,expense,group,,TRUE,,
+9100,Income Tax,expense,group,9000,TRUE,,
+9110,Current Income Tax,expense,tax,9100,TRUE,,
+9120,Deferred Income Tax,expense,tax,9100,TRUE,,
+9200,Other Taxes,expense,group,9000,TRUE,,
+9210,Franchise Tax,expense,tax,9200,TRUE,,
+9220,Business License Tax,expense,tax,9200,TRUE,,
