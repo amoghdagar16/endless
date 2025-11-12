@@ -1,307 +1,147 @@
-# AI Financial Companion (MiniBooks)
+# MiniBooks Frontend
 
-**Full-stack QuickBooks/NetSuite-style financial management platform with AI oversight.**
+QuickBooks/NetSuite-style financial management interface with AI oversight.
 
-This repository contains:
-- **Backend**: FastAPI + Supabase for financial data management ( Satya, Atiman)
-- **Frontend**: Next.js + Tailwind CSS for the user interface (Amogh)
-- **AI Integration**: OpenAI for expense validation, categorization, and insights(Amogh)
-- **Smart Parser**: EasyOCR for receipt parsing from images/PDFs(Atiman ) 
+## Features
 
-## Quick Start
+- **Dashboard**: Financial insights, KPIs, and system health monitoring
+- **Expenses**: Record expenses with AI-powered suggestions and validation
+- **Journals**: View journal entries (double-entry accounting)
+- **Parser**: Upload receipts (PNG/JPG/PDF/CSV) and extract data automatically
+- **AI Console**: Query your financial data with natural language
 
-### Backend Setup (Satya)
-```bash
-pip install -r requirements.txt
-cp .env.example .env
-# Edit .env with your Supabase and OpenAI credentials
-uvicorn main:app --reload
-```
+## Tech Stack
 
-### Frontend Setup (Amogh, ASHISH)
+- Next.js 14 (App Router)
+- TypeScript
+- Tailwind CSS
+- Axios for API calls
+- Recharts for visualizations
+
+## Setup
+
+### 1. Install Dependencies
+
 ```bash
 cd frontend
 npm install
+```
+
+### 2. Configure Environment
+
+Copy `.env.local.example` to `.env.local`:
+
+```bash
 cp .env.local.example .env.local
-# Edit .env.local with your API base URL and company ID
+```
+
+Edit `.env.local`:
+
+```env
+NEXT_PUBLIC_API_BASE=http://localhost:8000
+NEXT_PUBLIC_COMPANY_ID=<your-company-uuid>
+```
+
+> Get your company UUID from the backend by creating a company or querying `/companies/`
+
+### 3. Start Development Server
+
+```bash
 npm run dev
 ```
 
-See detailed setup instructions below.
+Frontend runs at: http://localhost:3000
 
----
+### 4. Build for Production
 
-## ⚙️ Tech Stack
-
-### Backend
-- **FastAPI** – Python web framework for APIs
-- **Supabase** – PostgreSQL database + authentication 
-- **Uvicorn** – ASGI web server for FastAPI
-- **python-dotenv** – Manages environment variables
-- **Supabase Python SDK** – Database queries and joins
-- **EasyOCR** – Deep learning-based OCR for text extraction
-- **Pillow** – Image processing library
-- **PyPDF** – PDF document handling
-- **OpenAI** – AI-powered expense validation and categorization
-
-### Frontend
-- **Next.js 14** – React framework with App Router
-- **TypeScript** – Type-safe JavaScript
-- **Tailwind CSS** – Utility-first CSS framework
-- **Axios** – HTTP client for API calls
-- **Recharts** – Charting library for visualizations  
-
----
-
-## 📁 Project Structure
-
-```
-/                           # Backend (FastAPI)
-├── main.py                 # FastAPI app entry point
-├── database.py             # Supabase connection
-├── smart_parser.py         # OCR text extraction logic
-├── requirements.txt        # Python dependencies
-├── .env.example           # Environment template
-└── /routes
-    ├── users.py           # User endpoints
-    ├── companies.py       # Company endpoints
-    ├── expenses.py        # Expense tracking
-    ├── parser.py          # Receipt parsing
-    └── ai_overlook.py     # AI validation & suggestions
-
-/frontend                   # Frontend (Next.js)
-├── /app                   # Next.js app router
-│   ├── layout.tsx         # Root layout
-│   ├── page.tsx           # Dashboard
-│   ├── /expenses          # Expense management
-│   ├── /journals          # Journal entries
-│   ├── /documents         # Receipt parser
-│   └── /ai                # AI console
-├── /components            # Reusable UI components
-├── /lib                   # Utilities (API client)
-└── package.json           # Frontend dependencies
-```
-
-### What each file does
-
-| File | Purpose |
-|------|----------|
-| `main.py` | Runs the FastAPI server and connects all routes |
-| `database.py` | Handles connection to Supabase |
-| `smart_parser.py` | OCR text extraction and field parsing logic |
-| `requirements.txt` | Lists all Python dependencies |
-| `.env` | Stores the Supabase URL and service key |
-| `/routes/users.py` | Handles user creation, editing, and linking to companies |
-| `/routes/companies.py` | Handles company creation, editing, and linking users |
-| `/routes/expenses.py` | Handles manual expense entry with journal entries and listing |
-| `/routes/parser.py` | Handles receipt parsing (images, PDFs, CSV) |
-
----
-
-## 🚀 Setup & Run
-
-### 1️⃣ Clone the repo
 ```bash
-git clone https://github.com/azythromycin/Endless-Moments-AI-Financial-Companion.git
-cd into the repo
+npm run build
+npm start
 ```
 
-### 2️⃣ Install dependencies
-```bash
-pip install -r requirements.txt
+## Project Structure
+
+```
+frontend/
+├── app/
+│   ├── layout.tsx           # Root layout with sidebar/topbar
+│   ├── page.tsx             # Dashboard
+│   ├── expenses/page.tsx    # Expense management
+│   ├── journals/page.tsx    # Journal entries
+│   ├── documents/page.tsx   # Receipt parser
+│   └── ai/page.tsx          # AI console
+├── components/
+│   ├── Sidebar.tsx          # Navigation sidebar
+│   ├── Topbar.tsx           # Top header bar
+│   ├── KpiCard.tsx          # KPI display card
+│   └── Table.tsx            # Reusable data table
+└── lib/
+    └── api.ts               # API client configuration
 ```
 
-**Install EasyOCR (for receipt parsing):**
-```bash
-# EasyOCR dependencies
-pip install easyocr pillow pdf2image
+## API Endpoints Used
 
-# Ubuntu/Debian - Install Poppler for PDF processing
-sudo apt-get install poppler-utils
+- `GET /status/healthz` - System health check
+- `GET /expenses/company/{company_id}` - List expenses
+- `POST /expenses/manual_entry` - Create expense
+- `POST /ai/overlook_expense` - AI validation & suggestions
+- `POST /parse/` - Parse receipt files
 
-# macOS - Install Poppler
-brew install poppler
-```
+## Workflow
 
-### 3️⃣ Add your environment variables
-Create a `.env` file in the root:
-```bash
-# Supabase Configuration
-SUPABASE_URL=https://yourproject.supabase.co
-SUPABASE_KEY=your_service_role_key
-```
+### Recording an Expense
 
-> ⚠️ Use the **service_role key** from Supabase — it allows full backend access (don't expose it publicly).
+1. **Option A: Manual Entry**
+   - Navigate to Expenses
+   - Fill in vendor, amount, date, category, memo
+   - Click "Run AI" to get suggestions
+   - Click "Apply Suggestions" to use them
+   - Click "Save Expense" to record
 
-### 4️⃣ Start the server
-```bash
-uvicorn main:app --reload
-```
+2. **Option B: Via Parser**
+   - Navigate to Parser
+   - Upload receipt (PNG/JPG/PDF/CSV)
+   - Click "Upload & Parse"
+   - Review extracted fields
+   - Click "Draft Expense with These Fields"
+   - Redirected to Expenses with prefilled form
+   - Optionally run AI for further refinement
+   - Save expense
 
-Your app will run at:  
-👉 **http://127.0.0.1:8000**
+### Viewing Data
 
-Swagger docs:  
-👉 **http://127.0.0.1:8000/docs**
+- **Dashboard**: See monthly totals, top categories, top vendors, system health
+- **Expenses**: View last 20 expenses in a table
+- **Journals**: View journal entries (coming soon - currently auto-created)
+- **AI Console**: Ask questions about your financial data
 
----
+## Notes
 
-## 🔗 API Overview
+- Expenses automatically create vendors, bills, and journal entries via the backend
+- Journal entries follow double-entry accounting (debit/credit)
+- AI suggestions use OpenAI (configured in backend .env)
+- Multi-tenant: All requests include company_id
+- No authentication yet - uses placeholder user_id
 
-### 🧱 Users (`/users`)
-| Method | Endpoint | Description |
-|--------|-----------|-------------|
-| GET | `/users/` | Get all users |
-| GET | `/users/{user_id}` | Get one user |
-| POST | `/users/` | Create a new user |
-| PATCH | `/users/{user_id}` | Update user details |
-| DELETE | `/users/{user_id}` | Delete a user |
-| POST | `/users/company/{company_id}` | Create a user linked to a company |
+## Development
 
----
+- TypeScript strict mode enabled
+- Tailwind CSS for styling
+- Client-side rendering with React hooks
+- All API calls via centralized `lib/api.ts`
 
-### 🏢 Companies (`/companies`)
-| Method | Endpoint | Description |
-|--------|-----------|-------------|
-| GET | `/companies/` | Get all companies |
-| GET | `/companies/with-users` | Get all companies with their users |
-| GET | `/companies/{company_id}` | Get one company (with users) |
-| GET | `/companies/{company_id}/users` | Get users in a company |
-| POST | `/companies/` | Create a new company |
-| PATCH | `/companies/{company_id}` | Update company details |
-| DELETE | `/companies/{company_id}` | Delete a company |
+## Troubleshooting
 
----
+**Cannot connect to API:**
+- Ensure backend is running on port 8000
+- Check NEXT_PUBLIC_API_BASE in .env.local
+- Verify CORS is enabled in backend
 
-### 💰 Expenses (`/expenses`)
-| Method | Endpoint | Description |
-|--------|-----------|-------------|
-| GET | `/expenses/` | Get all expenses (bills with vendor info) |
-| GET | `/expenses/company/{company_id}` | Get expenses for a specific company |
-| POST | `/expenses/manual_entry` | Create a manual expense with automatic vendor linking, bill creation, and journal entry |
+**Company ID errors:**
+- Set NEXT_PUBLIC_COMPANY_ID to a valid company UUID
+- Create a company via backend `/companies/` endpoint first
 
-**Example Request:**
-```json
-{
-  "company_id": "uuid",
-  "user_id": "uuid",
-  "vendor_name": "Office Supplies Inc",
-  "amount": 150.00,
-  "category": "Office Supplies",
-  "payment_method": "credit_card",
-  "memo": "Paper and pens",
-  "date": "2025-10-21"
-}
-```
-
----
-
-### 📄 Receipt Parser (`/parse`)
-| Method | Endpoint | Description |
-|--------|-----------|-------------|
-| POST | `/parse/` | Parse receipt image, PDF, or CSV and extract structured data |
-
-**Extracted Fields:**
-- Vendor name
-- Transaction date
-- Total amount
-- Description
-
-**Example Usage:**
-```bash
-curl -X POST http://localhost:8000/parse/ -F "file=@receipt.png"
-```
-
----
-
-### 🤖 AI Overlook (`/ai`)
-| Method | Endpoint | Description |
-|--------|-----------|-------------|
-| POST | `/ai/overlook_expense` | AI-powered expense validation and suggestions |
-| GET | `/status/healthz` | System health check including OpenAI status |
-
-**Example Request:**
-```json
-{
-  "company_id": "uuid",
-  "vendor_name": "Office Depot",
-  "amount": 125.50,
-  "date": "2025-11-04",
-  "category": "Office Supplies",
-  "memo": "Printer paper"
-}
-```
-
-**Example Response:**
-```json
-{
-  "valid": true,
-  "issues": [],
-  "suggestions": {
-    "normalized_vendor": "Office Depot",
-    "category": "Office Supplies",
-    "memo": "Office Depot expense"
-  },
-  "json_patch": { /* same as suggestions */ }
-}
-```
-
-> **Note:** Requires `OPENAI_API_KEY` in `.env`. Falls back to rule-based suggestions if not configured.
-
----
-
-## 🧩 Example
-
-### Create a new user linked to a company
-**POST** → `http://127.0.0.1:8000/users/company/d3d5e6c5-e1c2-4abc-9cce-5cbdcd0db575`
-```json
-{
-  "full_name": "Jane Doe",
-  "email": "jane@ai-finance.com",
-  "role": "accountant",
-  "user_type": "company"
-}
-```
-
-### Get a company with all its users
-**GET** → `http://127.0.0.1:8000/companies/d3d5e6c5-e1c2-4abc-9cce-5cbdcd0db575`
-
----
-
-## 💡 Notes
-
-- Backend uses the **Service Role key** — only for secure backend environments.
-- Database joins use **Supabase's PostgREST** syntax like `select("*, users(full_name, email)")`.
-- **Receipt parser** uses EasyOCR to extract text from images and PDFs with smart field parsing.
-- **Expense tracking** automatically creates vendors, bills, and journal entries for proper double-entry accounting.
-- **AI oversight** uses OpenAI for expense validation, categorization, and normalization.
-- **Frontend** provides QuickBooks/NetSuite-style interface with real-time AI suggestions.
-- API is modular and ready to scale — receipt parsing and expense automation are fully integrated!
-
----
-
-## 🎨 Frontend Features
-
-The Next.js frontend (`/frontend`) provides:
-
-- **Dashboard**: KPIs, monthly spending insights, system health monitoring
-- **Expenses**: Create expenses with AI-powered suggestions and validation
-- **Parser**: Upload receipts (PNG/JPG/PDF/CSV) and auto-extract fields
-- **Journals**: View double-entry journal records (auto-created from expenses)
-- **AI Console**: Natural language queries about financial data
-
-**Frontend runs on:** http://localhost:3000
-**See:** `/frontend/README.md` for detailed setup instructions
-
----
-
-## 👨‍💻 Author
-Endless Moments LLC
-Amogh Dagar 
-Satya Neriyanuru 
-Atiman Rohtagi 
-Ashish Kumar
-Dhruv Bhatt
----
-
-🧱 _Built with FastAPI + Supabase + Next.js + OpenAI for a future-ready AI accounting platform._
+**Parser not working:**
+- Ensure backend has EasyOCR installed
+- Check file format (PNG, JPG, PDF, CSV only)
+- File upload has 10MB limit (configurable in backend)
