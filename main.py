@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database import table
-from routes import users, companies, expenses, parser, ai_overlook
+from routes import users, companies, expenses, parser, ai_overlook, categories
 
 app = FastAPI(title="AI Financial Companion Backend")
 
@@ -20,6 +20,7 @@ app.include_router(companies.router)
 app.include_router(expenses.router)
 app.include_router(parser.router)
 app.include_router(ai_overlook.router)
+app.include_router(categories.router)
 
 @app.get("/")
 def read_root():

@@ -104,3 +104,73 @@ def create_expense(expense: dict):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error creating expense: {e}")
 
+
+# Update an expense
+@router.patch("/{expense_id}")
+def update_expense(expense_id: str, update_data: dict):
+    """Update an expense (bill)."""
+    try:
+        # Extract update fields
+        vendor_name = update_data.get("vendor_name")
+        amount = update_data.get("amount")
+        memo = update_data.get("memo")
+        date = update_data.get("date")
+        status = update_data.get("status")
+
+        # Build update object for bills table
+        bill_update = {}
+        if amount is not None:
+            bill_update["total_amount"] = amount
+            bill_update["balance_due"] = amount
+        if memo is not None:
+            bill_update["memo"] = memo
+        if date is not None:
+            bill_update["bill_date"] = date
+        if status is not None:
+            bill_update["status"] = status
+
+        # Update vendor if provided
+        if vendor_name:
+            # Get current bill to find company_id
+            current_bill = table("bills").select("company_id").eq("id", expense_id).execute()
+            if not current_bill.data:
+                raise HTTPException(status_code=404, detail="Expense not found")
+
+            company_id = current_bill.data[0]["company_id"]
+
+            # Create or fetch vendor
+            vendor_resp = table("vendors").select("*").eq("name", vendor_name).eq("company_id", company_id).execute()
+            if vendor_resp.data:
+                vendor_id = vendor_resp.data[0]["id"]
+            else:
+                new_vendor = {"company_id": company_id, "name": vendor_name}
+                vendor_insert = table("vendors").insert(new_vendor).execute()
+                vendor_id = vendor_insert.data[0]["id"]
+
+            bill_update["vendor_id"] = vendor_id
+
+        # Update the bill
+        if bill_update:
+            response = table("bills").update(bill_update).eq("id", expense_id).execute()
+            if not response.data:
+                raise HTTPException(status_code=404, detail="Expense not found")
+            return {"status": "success", "data": response.data}
+        else:
+            raise HTTPException(status_code=400, detail="No update fields provided")
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error updating expense: {e}")
+
+
+# Delete (void) an expense
+@router.delete("/{expense_id}")
+def delete_expense(expense_id: str):
+    """Delete an expense by setting status to 'void'."""
+    try:
+        response = table("bills").update({"status": "void"}).eq("id", expense_id).execute()
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Expense not found")
+        return {"status": "success", "message": f"Expense {expense_id} voided successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error deleting expense: {e}")
+
