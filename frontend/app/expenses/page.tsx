@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Table from "@/components/Table";
-import { api, COMPANY_ID } from "@/lib/api";
+import { api, getCompanyId } from "@/lib/api";
 
 interface ExpenseFormData {
   vendor_name: string;
@@ -18,6 +18,23 @@ interface AISuggestions {
   memo?: string;
 }
 
+interface Expense {
+  id: string;
+  bill_date: string;
+  total_amount: number;
+  memo?: string;
+  status: string;
+  vendors?: { name: string };
+  category?: string;
+}
+
+interface Category {
+  id: string;
+  name: string;
+  description?: string;
+  budget_amount?: number;
+}
+
 export default function ExpensesPage() {
   const [formData, setFormData] = useState<ExpenseFormData>({
     vendor_name: "",
@@ -28,12 +45,25 @@ export default function ExpensesPage() {
   });
 
   const [aiSuggestions, setAiSuggestions] = useState<AISuggestions | null>(null);
-  const [expenses, setExpenses] = useState<any[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
+  // Edit modal state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [editFormData, setEditFormData] = useState<ExpenseFormData>({
+    vendor_name: "",
+    amount: "",
+    date: "",
+    category: "",
+    memo: "",
+  });
+
   useEffect(() => {
     loadExpenses();
+    loadCategories();
 
     // Check for draft expense from parser
     const draftData = sessionStorage.getItem("draftExpense");
@@ -57,8 +87,14 @@ export default function ExpensesPage() {
 
   const loadExpenses = async () => {
     try {
-      const resp = await api.get<{ status: string; data: any[] }>(
-        `/expenses/company/${COMPANY_ID}`
+      const companyId = getCompanyId();
+      if (!companyId) {
+        console.warn("No company ID found");
+        return;
+      }
+
+      const resp = await api.get<{ status: string; data: Expense[] }>(
+        `/expenses/company/${companyId}`
       );
       setExpenses(resp.data || []);
     } catch (error) {
@@ -66,12 +102,30 @@ export default function ExpensesPage() {
     }
   };
 
+  const loadCategories = async () => {
+    try {
+      const companyId = getCompanyId();
+      if (!companyId) {
+        console.warn("No company ID found");
+        return;
+      }
+
+      const resp = await api.get<{ status: string; data: Category[] }>(
+        `/categories/company/${companyId}`
+      );
+      setCategories(resp.data || []);
+    } catch (error) {
+      console.error("Error loading categories:", error);
+    }
+  };
+
   const handleRunAI = async () => {
     setLoading(true);
     setMessage("");
     try {
+      const companyId = getCompanyId();
       const resp = await api.post<any>("/ai/overlook_expense", {
-        company_id: COMPANY_ID,
+        company_id: companyId,
         vendor_name: formData.vendor_name,
         amount: parseFloat(formData.amount),
         date: formData.date,
@@ -109,9 +163,9 @@ export default function ExpensesPage() {
     setLoading(true);
     setMessage("");
     try {
-      // For now, use a placeholder user_id - in production this would come from auth
+      const companyId = getCompanyId();
       await api.post("/expenses/manual_entry", {
-        company_id: COMPANY_ID,
+        company_id: companyId,
         user_id: "00000000-0000-0000-0000-000000000000", // Placeholder
         vendor_name: formData.vendor_name,
         amount: parseFloat(formData.amount),
@@ -138,13 +192,59 @@ export default function ExpensesPage() {
     }
   };
 
-  const tableRows = expenses.slice(0, 20).map((exp) => [
-    exp.bill_date,
-    exp.vendors?.name || "Unknown",
-    `$${exp.total_amount?.toFixed(2) || "0.00"}`,
-    exp.memo || "-",
-    exp.status || "draft",
-  ]);
+  const handleEdit = (expense: Expense) => {
+    setEditingExpense(expense);
+    setEditFormData({
+      vendor_name: expense.vendors?.name || "",
+      amount: expense.total_amount.toString(),
+      date: expense.bill_date,
+      category: expense.category || "",
+      memo: expense.memo || "",
+    });
+    setShowEditModal(true);
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingExpense) return;
+
+    setLoading(true);
+    try {
+      await api.patch(`/expenses/${editingExpense.id}`, {
+        vendor_name: editFormData.vendor_name,
+        amount: parseFloat(editFormData.amount),
+        date: editFormData.date,
+        category: editFormData.category,
+        memo: editFormData.memo,
+      });
+
+      setMessage("Expense updated successfully!");
+      setShowEditModal(false);
+      setEditingExpense(null);
+      await loadExpenses();
+    } catch (error: any) {
+      setMessage(`Error: ${error.response?.data?.detail || error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (expenseId: string, vendorName: string) => {
+    if (!confirm(`Are you sure you want to delete the expense for "${vendorName}"?`)) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await api.delete(`/expenses/${expenseId}`);
+      setMessage("Expense deleted successfully!");
+      await loadExpenses();
+    } catch (error: any) {
+      setMessage(`Error: ${error.response?.data?.detail || error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -198,13 +298,27 @@ export default function ExpensesPage() {
 
           <div>
             <label className="label">Category</label>
-            <input
-              type="text"
+            <select
               className="input"
               value={formData.category}
               onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              placeholder="Office Supplies"
-            />
+            >
+              <option value="">Select a category...</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.name}>
+                  {cat.name}
+                  {cat.budget_amount && ` ($${cat.budget_amount.toFixed(0)} budget)`}
+                </option>
+              ))}
+            </select>
+            {categories.length === 0 && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                No categories found.{" "}
+                <a href="/settings/categories" className="text-brand-600 dark:text-brand-400 hover:underline">
+                  Create categories
+                </a>
+              </p>
+            )}
           </div>
 
           <div className="md:col-span-2">
@@ -311,17 +425,179 @@ export default function ExpensesPage() {
             {expenses.length} total
           </div>
         </div>
-        <Table
-          headers={["Date", "Vendor", "Amount", "Memo", "Status"]}
-          rows={tableRows}
-          emptyMessage="No expenses recorded yet. Create your first expense above!"
-          emptyIcon={(
-            <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          )}
-        />
+
+        {/* Custom table with actions */}
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-800/50">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Vendor</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Amount</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Memo</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+              {expenses.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-12 text-center">
+                    <div className="flex flex-col items-center justify-center text-gray-400 dark:text-gray-500">
+                      <svg className="w-12 h-12 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <p className="text-sm">No expenses recorded yet. Create your first expense above!</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                expenses.slice(0, 20).map((expense) => (
+                  <tr key={expense.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
+                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">{expense.bill_date}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">{expense.vendors?.name || "Unknown"}</td>
+                    <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">${expense.total_amount?.toFixed(2) || "0.00"}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{expense.memo || "-"}</td>
+                    <td className="px-4 py-3 text-sm">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                        expense.status === 'paid'
+                          ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                          : expense.status === 'void'
+                          ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
+                          : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
+                      }`}>
+                        {expense.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => handleEdit(expense)}
+                          className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
+                          title="Edit expense"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => handleDelete(expense.id, expense.vendors?.name || "Unknown")}
+                          className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 transition-colors"
+                          title="Delete expense"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
+
+      {/* Edit Modal */}
+      {showEditModal && editingExpense && (
+        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Edit Expense</h3>
+            </div>
+
+            <form onSubmit={handleSaveEdit}>
+              <div className="p-6 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="label">Vendor Name</label>
+                    <input
+                      type="text"
+                      className="input"
+                      value={editFormData.vendor_name}
+                      onChange={(e) => setEditFormData({ ...editFormData, vendor_name: e.target.value })}
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="label">Amount</label>
+                    <input
+                      type="number"
+                      className="input"
+                      value={editFormData.amount}
+                      onChange={(e) => setEditFormData({ ...editFormData, amount: e.target.value })}
+                      step="0.01"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="label">Date</label>
+                    <input
+                      type="date"
+                      className="input"
+                      value={editFormData.date}
+                      onChange={(e) => setEditFormData({ ...editFormData, date: e.target.value })}
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="label">Category</label>
+                    <select
+                      className="input"
+                      value={editFormData.category}
+                      onChange={(e) => setEditFormData({ ...editFormData, category: e.target.value })}
+                    >
+                      <option value="">Select a category...</option>
+                      {categories.map((cat) => (
+                        <option key={cat.id} value={cat.name}>
+                          {cat.name}
+                          {cat.budget_amount && ` ($${cat.budget_amount.toFixed(0)} budget)`}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="label">Memo</label>
+                    <input
+                      type="text"
+                      className="input"
+                      value={editFormData.memo}
+                      onChange={(e) => setEditFormData({ ...editFormData, memo: e.target.value })}
+                      placeholder="Optional"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setEditingExpense(null);
+                  }}
+                  className="btn btn-secondary"
+                  disabled={loading}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={loading}
+                >
+                  {loading ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

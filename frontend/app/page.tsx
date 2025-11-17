@@ -1,9 +1,24 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend
+} from "recharts";
 import KpiCard from "@/components/KpiCard";
 import { SkeletonKPI } from "@/components/Skeleton";
-import { api, COMPANY_ID } from "@/lib/api";
+import { api, getCompanyId } from "@/lib/api";
 
 interface Expense {
   id: string;
@@ -13,12 +28,34 @@ interface Expense {
   bill_date: string;
 }
 
+interface TrendDataPoint {
+  month: string;
+  amount: number;
+}
+
+interface CategoryDataPoint {
+  name: string;
+  value: number;
+}
+
+interface VendorDataPoint {
+  name: string;
+  amount: number;
+}
+
+const COLORS = ['#4f46e5', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6'];
+
 export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [health, setHealth] = useState<any>(null);
   const [totalSpend, setTotalSpend] = useState(0);
   const [topCategory, setTopCategory] = useState("N/A");
   const [topVendor, setTopVendor] = useState("N/A");
+
+  // Chart data state
+  const [trendData, setTrendData] = useState<TrendDataPoint[]>([]);
+  const [categoryData, setCategoryData] = useState<CategoryDataPoint[]>([]);
+  const [vendorData, setVendorData] = useState<VendorDataPoint[]>([]);
 
   useEffect(() => {
     loadDashboardData();
@@ -27,6 +64,13 @@ export default function Dashboard() {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
+      const companyId = getCompanyId();
+
+      if (!companyId) {
+        console.warn("No company ID found");
+        setLoading(false);
+        return;
+      }
 
       // Get current month date range
       const now = new Date();
@@ -35,7 +79,7 @@ export default function Dashboard() {
 
       // Fetch expenses for the company
       const expensesResp = await api.get<{ status: string; data: Expense[] }>(
-        `/expenses/company/${COMPANY_ID}`
+        `/expenses/company/${companyId}`
       );
 
       const expenses = expensesResp.data || [];
@@ -53,7 +97,7 @@ export default function Dashboard() {
       // Calculate top category
       const categoryTotals: { [key: string]: number } = {};
       monthExpenses.forEach((exp) => {
-        const cat = "Office Supplies"; // Default category since backend doesn't store it
+        const cat = exp.category || "Uncategorized";
         categoryTotals[cat] = (categoryTotals[cat] || 0) + (exp.total_amount || 0);
       });
 
@@ -73,6 +117,46 @@ export default function Dashboard() {
       if (topVend) {
         setTopVendor(`${topVend[0]} ($${topVend[1].toFixed(2)})`);
       }
+
+      // Process data for 6-month trend chart
+      const monthlyTrends: { [key: string]: number } = {};
+      const last6Months: string[] = [];
+
+      for (let i = 5; i >= 0; i--) {
+        const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const monthKey = date.toISOString().slice(0, 7); // YYYY-MM format
+        const monthLabel = date.toLocaleDateString('default', { month: 'short', year: '2-digit' });
+        last6Months.push(monthLabel);
+        monthlyTrends[monthLabel] = 0;
+      }
+
+      expenses.forEach((exp) => {
+        const expDate = new Date(exp.bill_date);
+        const monthLabel = expDate.toLocaleDateString('default', { month: 'short', year: '2-digit' });
+        if (monthLabel in monthlyTrends) {
+          monthlyTrends[monthLabel] += exp.total_amount || 0;
+        }
+      });
+
+      const trendChartData: TrendDataPoint[] = last6Months.map(month => ({
+        month,
+        amount: monthlyTrends[month] || 0
+      }));
+      setTrendData(trendChartData);
+
+      // Process data for category pie chart
+      const categoryChartData: CategoryDataPoint[] = Object.entries(categoryTotals)
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 8); // Top 8 categories
+      setCategoryData(categoryChartData);
+
+      // Process data for top vendors bar chart
+      const vendorChartData: VendorDataPoint[] = Object.entries(vendorTotals)
+        .map(([name, amount]) => ({ name, amount }))
+        .sort((a, b) => b.amount - a.amount)
+        .slice(0, 5); // Top 5 vendors
+      setVendorData(vendorChartData);
 
       // Fetch health status
       const healthResp = await api.get<any>("/status/healthz");
@@ -99,6 +183,7 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
+      {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <KpiCard
           title="Total Spend"
@@ -130,6 +215,109 @@ export default function Dashboard() {
         />
       </div>
 
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* 6-Month Spending Trend */}
+        <div className="card">
+          <h2 className="text-base font-semibold text-gray-900 dark:text-white mb-5">6-Month Spending Trend</h2>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={trendData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis
+                dataKey="month"
+                stroke="#6b7280"
+                style={{ fontSize: '12px' }}
+              />
+              <YAxis
+                stroke="#6b7280"
+                style={{ fontSize: '12px' }}
+                tickFormatter={(value) => `$${value.toLocaleString()}`}
+              />
+              <Tooltip
+                formatter={(value: number) => [`$${value.toFixed(2)}`, 'Amount']}
+                contentStyle={{
+                  backgroundColor: '#fff',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '0.5rem',
+                  boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)'
+                }}
+              />
+              <Line
+                type="monotone"
+                dataKey="amount"
+                stroke="#4f46e5"
+                strokeWidth={2}
+                dot={{ fill: '#4f46e5', r: 4 }}
+                activeDot={{ r: 6 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Category Breakdown */}
+        <div className="card">
+          <h2 className="text-base font-semibold text-gray-900 dark:text-white mb-5">Category Breakdown</h2>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                data={categoryData}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                outerRadius={80}
+                fill="#8884d8"
+                dataKey="value"
+              >
+                {categoryData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip
+                formatter={(value: number) => `$${value.toFixed(2)}`}
+                contentStyle={{
+                  backgroundColor: '#fff',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '0.5rem',
+                  boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)'
+                }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Top Vendors Bar Chart */}
+      <div className="card">
+        <h2 className="text-base font-semibold text-gray-900 dark:text-white mb-5">Top 5 Vendors</h2>
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={vendorData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <XAxis
+              dataKey="name"
+              stroke="#6b7280"
+              style={{ fontSize: '12px' }}
+            />
+            <YAxis
+              stroke="#6b7280"
+              style={{ fontSize: '12px' }}
+              tickFormatter={(value) => `$${value.toLocaleString()}`}
+            />
+            <Tooltip
+              formatter={(value: number) => [`$${value.toFixed(2)}`, 'Amount']}
+              contentStyle={{
+                backgroundColor: '#fff',
+                border: '1px solid #e5e7eb',
+                borderRadius: '0.5rem',
+                boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)'
+              }}
+            />
+            <Bar dataKey="amount" fill="#06b6d4" radius={[8, 8, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* System Health */}
       {health && (
         <div className="card">
           <div className="flex items-center justify-between mb-5">
