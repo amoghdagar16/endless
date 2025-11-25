@@ -1,56 +1,78 @@
-from fastapi import FastAPI
+from __future__ import annotations
+
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from database import table
-from routes import users, companies, expenses, parser, ai_overlook
+from fastapi.responses import JSONResponse
 
-app = FastAPI(title="AI Financial Companion Backend")
+from app.api.v1.routes import (
+    accounts,
+    documents,
+    health,
+    opening_balances,
+    periods,
+    reports,
+    transactions,
+)
+from app.core.exceptions import APIError
+from app.core.logging import configure_logging
 
-# CORS middleware for frontend
+
+configure_logging()
+
+app = FastAPI(title="AI Accounting Backend", version="0.1.0")
+
+# Configure CORS - allow all origins in development
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
-    allow_credentials=True,
+    allow_origins=["*"],  # Allow all origins for development
+    allow_credentials=False,  # Must be False when allow_origins is ["*"]
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
-# include routers
-app.include_router(users.router)
-app.include_router(companies.router)
-app.include_router(expenses.router)
-app.include_router(parser.router)
-app.include_router(ai_overlook.router)
 
-@app.get("/")
-def read_root():
-    return {"message": "AI Financial Companion Backend is running!"}
-
-@app.get("/health")
-def health_check():
-    try:
-        response = table("users").select("*").limit(1).execute()
-        return {"message": "Connected to Supabase!", "data": response.data}
-    except Exception as e:
-        return {"error": str(e)}
+@app.exception_handler(APIError)
+async def api_error_handler(_: Request, exc: APIError) -> JSONResponse:
+    return JSONResponse(status_code=_status_for_error(exc), content={
+        "error": {
+            "code": exc.code,
+            "message": exc.message,
+            "details": exc.details,
+        }
+    })
 
 
-@app.get("/status/healthz")
-def healthz():
-    """Health check endpoint for frontend."""
-    import os
-    from datetime import datetime
-
-    try:
-        # Test database connection
-        response = table("users").select("*").limit(1).execute()
-        db_status = "connected"
-    except Exception as e:
-        db_status = f"error: {str(e)}"
-
-    return {
-        "status": "healthy" if db_status == "connected" else "degraded",
-        "timestamp": datetime.utcnow().isoformat(),
-        "database": db_status,
-        "openai_configured": bool(os.getenv("OPENAI_API_KEY")),
-        "version": "1.0.0"
+def _status_for_error(exc: APIError) -> int:
+    mapping = {
+        "VALIDATION_ERROR": 422,
+        "CONFLICT": 409,
+        "NOT_FOUND": 404,
+        "PERIOD_LOCKED": 409,
+        "UNBALANCED_ENTRY": 400,
     }
+    return mapping.get(exc.code, 400)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(_: Request, exc: RequestValidationError) -> JSONResponse:
+    return JSONResponse(
+        status_code=422,
+        content={
+            "error": {
+                "code": "VALIDATION_ERROR",
+                "message": "Validation failed",
+                "details": exc.errors(),
+            }
+        },
+    )
+
+
+app.include_router(health.router, prefix="/v1")
+app.include_router(accounts.router, prefix="/v1")
+app.include_router(transactions.router, prefix="/v1")
+app.include_router(opening_balances.router, prefix="/v1")
+app.include_router(periods.router, prefix="/v1")
+app.include_router(reports.router, prefix="/v1")
+app.include_router(documents.router, prefix="/v1")
