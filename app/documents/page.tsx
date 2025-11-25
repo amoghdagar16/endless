@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { documents } from "@/lib/api";
 
 interface ParsedFields {
   vendor?: string;
@@ -22,6 +23,7 @@ export default function DocumentsPage() {
   const [error, setError] = useState("");
   const [aiEnhanced, setAiEnhanced] = useState(false);
   const [message, setMessage] = useState("");
+  const [documentId, setDocumentId] = useState<string | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -45,39 +47,74 @@ export default function DocumentsPage() {
     setMessage("");
 
     try {
-      // Simulate OCR processing for demo
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Demo parsed data
-      setParsedFields({
-        vendor: "Sample Vendor",
-        date: new Date().toISOString().split('T')[0],
-        amount: "99.99",
-        description: "Parsed from uploaded file",
-        category: "Office Supplies",
-        memo: `Extracted from ${file.name}`,
-      });
+      // 1. Upload file
+      console.log("Uploading file...");
+      const uploadResult = await documents.upload(file);
+      console.log("Upload result:", uploadResult);
+      setDocumentId(uploadResult.id);
+
+      // 2. Process with OCR
+      console.log("Processing with EasyOCR...");
+      const processResult = await documents.process(uploadResult.id);
+      console.log("Process result:", processResult);
+      console.log("Extracted vendor:", processResult.vendor);
+      console.log("Extracted date:", processResult.transactionDate);
+      console.log("Extracted amount:", processResult.totalAmount);
+      console.log("Extracted tax:", processResult.taxAmount);
+      console.log("Extracted description:", processResult.description);
+
+      // 3. Extract and display parsed fields
+      const parsedData = {
+        vendor: processResult.vendor || "",
+        date: processResult.transactionDate || new Date().toISOString().split("T")[0],
+        amount: processResult.totalAmount?.toString() || "",
+        description: processResult.description || "",  // Phi3 extracted items + card digits
+        category: "", // Will be populated by ML later
+        memo: processResult.taxAmount?.toString() || "0.00",  // Just store the tax amount, not the label
+        confidence: processResult.ocrConfidence >= 75 ? "high" : processResult.ocrConfidence >= 50 ? "medium" : "low",
+      };
+      console.log("Setting parsed fields:", parsedData);
+      setParsedFields(parsedData);
+
+      setSampleText("");  // Remove raw OCR text display
       setAiEnhanced(true);
-      setMessage("✨ Successfully parsed receipt! (Demo mode - OCR service integration pending)");
+      setMessage(
+        `✨ OCR processing complete! Extracted with ${processResult.ocrConfidence}% confidence. Review and edit fields below.`
+      );
     } catch (err: any) {
-      console.error("Upload error:", err);
-      setError(`Upload failed: ${err.message}`);
+      console.error("Upload/OCR error:", err);
+      setError(`Failed: ${err.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDraftExpense = () => {
-    if (parsedFields) {
-      // Store AI-enhanced parsed fields in sessionStorage
+  const handleDraftExpense = async () => {
+    if (!parsedFields || !documentId) return;
+
+    try {
+      // Update document with any user edits
+      await documents.update(documentId, {
+        vendor: parsedFields.vendor,
+        transactionDate: parsedFields.date,
+        totalAmount: parsedFields.amount,
+        description: parsedFields.description,
+      });
+
+      // Store for ML prediction phase (coming soon)
       sessionStorage.setItem("draftExpense", JSON.stringify({
-        vendor_name: parsedFields.vendor || "",
+        documentId: documentId,
+        vendor: parsedFields.vendor || "",
         amount: parsedFields.amount || "",
         date: parsedFields.date || new Date().toISOString().split('T')[0],
         category: parsedFields.category || "",
         memo: parsedFields.memo || parsedFields.description || "",
       }));
-      router.push("/expenses");
+
+      setMessage("✅ Document fields saved! ML category prediction coming soon...");
+      // router.push("/journals/new"); // Will enable after ML prediction
+    } catch (err: any) {
+      setError(`Failed to save: ${err.message}`);
     }
   };
 
@@ -256,50 +293,47 @@ export default function DocumentsPage() {
             </div>
 
             <div className="md:col-span-2 space-y-1">
-              <label className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wide">Memo</label>
+              <label className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wide">Items Purchased</label>
               <textarea
-                value={parsedFields.memo || ""}
-                onChange={(e) => setParsedFields({ ...parsedFields, memo: e.target.value })}
-                rows={3}
+                value={parsedFields.description || ""}
+                onChange={(e) => setParsedFields({ ...parsedFields, description: e.target.value })}
+                rows={4}
                 className="w-full p-3 bg-white dark:bg-neutral-800 rounded-lg border border-gray-300 dark:border-neutral-700 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all resize-none"
-                placeholder="Enter memo or description"
+                placeholder="Items with prices, tax, and card digits will appear here..."
               />
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Includes item details, tax amount, and card ending digits
+              </p>
             </div>
           </div>
 
-          {sampleText && (
-            <div className="mt-4">
-              <div className="label">Sample Text (first 500 chars)</div>
-              <div className="p-3 bg-gray-50 rounded-md border border-gray-200 text-xs font-mono overflow-x-auto">
-                {sampleText}
-              </div>
-            </div>
-          )}
-
           <div className="mt-6 flex flex-col gap-3">
             <button
-              disabled
-              className="inline-flex items-center justify-center gap-2 w-full px-6 py-3 bg-gray-300 dark:bg-neutral-700 text-gray-500 dark:text-gray-400 rounded-lg cursor-not-allowed transition-all duration-200 font-medium"
-              title="Journal entry creation coming soon"
+              onClick={handleDraftExpense}
+              disabled={!parsedFields}
+              className="inline-flex items-center justify-center gap-2 w-full px-6 py-3 bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-medium shadow-sm hover:shadow-md active:scale-[0.98]"
+              title="Save extracted fields"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
               </svg>
-              Draft Expense with These Fields
+              Save Fields (ML Prediction Next)
             </button>
             <p className="text-xs text-center text-gray-500 dark:text-gray-400">
-              💡 Expense creation will be enabled once journal entry functionality is implemented
+              💡 After saving, ML will predict the account category (coming next)
             </p>
           </div>
         </div>
       )}
 
-      <div className="card bg-blue-50 border-blue-200">
-        <h3 className="font-semibold text-blue-900 mb-2">Supported Formats</h3>
-        <ul className="list-disc list-inside text-sm text-blue-800 space-y-1">
+      <div className="card bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+        <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">Supported Formats & Features</h3>
+        <ul className="list-disc list-inside text-sm text-blue-800 dark:text-blue-200 space-y-1">
           <li>Images: PNG, JPG (OCR extraction using EasyOCR)</li>
-          <li>Documents: PDF (text and image extraction)</li>
-          <li>Spreadsheets: CSV (structured data parsing)</li>
+          <li>Documents: PDF (planned - text and image extraction)</li>
+          <li>Auto-extracts: Vendor name, date, total amount, tax</li>
+          <li>Editable fields before saving to database</li>
+          <li>Coming soon: ML-powered category prediction</li>
         </ul>
       </div>
     </div>

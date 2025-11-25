@@ -27,6 +27,8 @@ export interface Transaction {
   status: 'draft' | 'posted';
   totalDebit: number;
   totalCredit: number;
+  vendorName?: string | null;
+  amount?: number | null;
   createdAt?: string;
   updatedAt?: string;
   lines: TransactionLine[];
@@ -62,3 +64,45 @@ export interface TransactionListResponse {
   page: number;
   perPage: number;
 }
+
+// Simple Transaction Types (user-friendly entry)
+
+export interface SimpleTransaction {
+  id: string;
+  vendorName: string;
+  date: string;
+  amount: number;
+  description: string;
+  reference: string | null;
+  status: 'draft' | 'posted';
+  source: string;
+  needsReview: boolean;
+  createdAt: string | null;
+}
+
+export interface SimpleTransactionCreate {
+  vendorName: string;
+  date: string;
+  amount: number;
+  description: string;
+  reference?: string | null;
+}
+
+export interface SimpleTransactionFilters {
+  status?: 'draft' | 'posted' | '';
+  needsReview?: boolean;
+  page?: number;
+  perPage?: number;
+}
+
+export interface SimpleTransactionListResponse {
+  transactions: SimpleTransaction[];
+  total: number;
+  page: number;
+  perPage: number;
+}
+
+export interface ConvertToJournalRequest {
+  lines: TransactionLineCreate[];
+}
+

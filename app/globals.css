@@ -77,6 +77,27 @@
     display: none;
   }
   
+  /* Force light backgrounds on all form inputs */
+  input[type="text"],
+  input[type="number"],
+  input[type="date"],
+  input[type="email"],
+  input[type="password"],
+  textarea,
+  select {
+    background-color: white !important;
+    color: #111827 !important;
+  }
+  
+  input[type="text"]:-webkit-autofill,
+  input[type="number"]:-webkit-autofill,
+  input[type="date"]:-webkit-autofill,
+  input[type="email"]:-webkit-autofill,
+  input[type="password"]:-webkit-autofill {
+    -webkit-box-shadow: 0 0 0 1000px white inset !important;
+    -webkit-text-fill-color: #111827 !important;
+  }
+  
   select.appearance-none {
     background-image: none;
   }

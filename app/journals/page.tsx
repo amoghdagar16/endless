@@ -106,7 +106,9 @@ export default function JournalsPage() {
   };
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('en-US', {
+    // Parse as local date to avoid timezone shifts
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -297,13 +299,6 @@ export default function JournalsPage() {
                           </Link>
                           {transaction.status === 'draft' && (
                             <>
-                              <span className="text-gray-300 dark:text-gray-700">•</span>
-                              <Link
-                                href={`/journals/${transaction.id}/edit`}
-                                className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium text-xs uppercase tracking-wide hover:underline"
-                              >
-                                Edit
-                              </Link>
                               <span className="text-gray-300 dark:text-gray-700">•</span>
                               <button
                                 onClick={() => setPostConfirm(transaction.id)}
