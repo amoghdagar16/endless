@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Table from "@/components/Table";
-import { api, COMPANY_ID } from "@/lib/api";
+import { api, getCurrentCompanyId } from "@/lib/api";
 
 interface ExpenseFormData {
   vendor_name: string;
@@ -31,9 +31,44 @@ export default function ExpensesPage() {
   const [expenses, setExpenses] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [companyId, setCompanyId] = useState<string>("");
 
   useEffect(() => {
-    loadExpenses();
+    // Fetch company ID first
+    const initCompanyId = async () => {
+      try {
+        setLoading(true);
+        setMessage("Loading company information...");
+        
+        const id = await getCurrentCompanyId();
+        if (id) {
+          setCompanyId(id);
+          await loadExpenses(id);
+          setMessage(""); // Clear loading message
+        } else {
+          // Retry once after a short delay (in case company was just created)
+          setTimeout(async () => {
+            const retryId = await getCurrentCompanyId();
+            if (retryId) {
+              setCompanyId(retryId);
+              await loadExpenses(retryId);
+              setMessage("");
+            } else {
+              setMessage("Error: No company ID found. Please sign out and sign up again, or contact support.");
+            }
+            setLoading(false);
+          }, 2000);
+          return; // Don't set loading to false yet if we're retrying
+        }
+      } catch (error: any) {
+        console.error("Error initializing company ID:", error);
+        setMessage(`Error: ${error.message || "Failed to load company information"}`);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    initCompanyId();
 
     // Check for draft expense from parser
     const draftData = sessionStorage.getItem("draftExpense");
@@ -55,10 +90,13 @@ export default function ExpensesPage() {
     }
   }, []);
 
-  const loadExpenses = async () => {
+  const loadExpenses = async (cid?: string) => {
+    const id = cid || companyId;
+    if (!id) return;
+    
     try {
       const resp = await api.get<{ status: string; data: any[] }>(
-        `/expenses/company/${COMPANY_ID}`
+        `/expenses/company/${id}`
       );
       setExpenses(resp.data || []);
     } catch (error) {
@@ -67,11 +105,16 @@ export default function ExpensesPage() {
   };
 
   const handleRunAI = async () => {
+    if (!companyId) {
+      setMessage("Error: No company ID found. Please ensure you're signed up with a company.");
+      return;
+    }
+    
     setLoading(true);
     setMessage("");
     try {
       const resp = await api.post<any>("/ai/overlook_expense", {
-        company_id: COMPANY_ID,
+        company_id: companyId,
         vendor_name: formData.vendor_name,
         amount: parseFloat(formData.amount),
         date: formData.date,
@@ -106,13 +149,22 @@ export default function ExpensesPage() {
   };
 
   const handleSave = async () => {
+    if (!companyId) {
+      setMessage("Error: No company ID found. Please ensure you're signed up with a company.");
+      return;
+    }
+    
     setLoading(true);
     setMessage("");
     try {
-      // For now, use a placeholder user_id - in production this would come from auth
+      // Get user ID from auth
+      const { getCurrentUser } = await import("@/lib/auth");
+      const user = await getCurrentUser();
+      const userId = user?.id || "00000000-0000-0000-0000-000000000000";
+      
       await api.post("/expenses/manual_entry", {
-        company_id: COMPANY_ID,
-        user_id: "00000000-0000-0000-0000-000000000000", // Placeholder
+        company_id: companyId,
+        user_id: userId,
         vendor_name: formData.vendor_name,
         amount: parseFloat(formData.amount),
         category: formData.category,

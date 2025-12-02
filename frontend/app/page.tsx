@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import KpiCard from "@/components/KpiCard";
 import { SkeletonKPI } from "@/components/Skeleton";
-import { api, COMPANY_ID } from "@/lib/api";
+import { api, getCurrentCompanyId } from "@/lib/api";
 
 interface Expense {
   id: string;
@@ -34,11 +34,18 @@ export default function Dashboard() {
       const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
 
       // Fetch expenses for the company
-      const expensesResp = await api.get<{ status: string; data: Expense[] }>(
-        `/expenses/company/${COMPANY_ID}`
-      );
-
-      const expenses = expensesResp.data || [];
+      let expenses: Expense[] = [];
+      const companyId = await getCurrentCompanyId();
+      if (companyId) {
+        try {
+          const expensesResp = await api.get<{ status: string; data: Expense[] }>(
+            `/expenses/company/${companyId}`
+          );
+          expenses = expensesResp.data || [];
+        } catch (err) {
+          console.warn("Could not fetch expenses (company ID may be missing):", err);
+        }
+      }
 
       // Filter for current month
       const monthExpenses = expenses.filter((exp) => {

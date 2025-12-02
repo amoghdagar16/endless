@@ -1,7 +1,7 @@
 "use client";
 
-import { COMPANY_ID } from "@/lib/api";
 import { usePathname } from "next/navigation";
+import ProfileMenu from "./ProfileMenu";
 
 const pageTitles: Record<string, string> = {
   "/": "Dashboard",
@@ -29,16 +29,7 @@ export default function Topbar() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-neutral-800 rounded-lg border border-border/50">
-            <div className="w-2 h-2 rounded-full bg-brand-500 animate-pulse"></div>
-            <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-              {COMPANY_ID ? (
-                <span className="font-mono">{COMPANY_ID.slice(0, 8)}</span>
-              ) : (
-                "No Company"
-              )}
-            </span>
-          </div>
+          <ProfileMenu />
         </div>
       </div>
     </header>
