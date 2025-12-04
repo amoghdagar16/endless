@@ -1,12 +1,25 @@
-# AI Financial Companion (MiniBooks)
+# Endless - AI-Powered Accounting Platform
 
-**Full-stack QuickBooks/NetSuite-style financial management platform with AI oversight.**
+**Modern, full-stack accounting system with integrated AI insights and double-entry bookkeeping.**
 
 This repository contains:
-- **Backend**: FastAPI + Supabase for financial data management ( Satya, Atiman)
-- **Frontend**: Next.js + Tailwind CSS for the user interface (Amogh)
-- **AI Integration**: OpenAI for expense validation, categorization, and insights(Amogh)
-- **Smart Parser**: EasyOCR for receipt parsing from images/PDFs(Atiman ) 
+- **Backend**: FastAPI + Supabase for financial data management
+- **Frontend**: Next.js 14 + Tailwind CSS with modern UX (Notion + QuickBooks style)
+- **AI Integration**: OpenAI for insights, predictions, anomaly detection, and natural language queries
+- **Smart OCR**: EasyOCR integrated into journal entries for receipt/invoice processing
+- **Double-Entry Accounting**: Complete Chart of Accounts, Journal Entries, and automated balance updates
+
+## 🎯 What's New - Complete System Redesign
+
+This is a **ground-up redesign** with professional accounting features:
+
+### Five Core Modules
+
+1. **📊 Dashboard** - Smart financial overview with graphs, KPIs, and AI summaries
+2. **📖 Journals** - Core transaction logging with built-in OCR and double-entry validation
+3. **🗂️ Chart of Accounts** - CSV upload, tree view, real-time balance updates
+4. **🤖 AI Insights** - Predictions, anomalies, recommendations + floating "Ask AI" on every page
+5. **👤 Profile** - User and company settings management 
 
 ## Quick Start
 
@@ -18,16 +31,22 @@ cp .env.example .env
 uvicorn main:app --reload
 ```
 
-### Frontend Setup (Amogh, ASHISH)
+### Frontend Setup
 ```bash
 cd frontend
 npm install
 cp .env.local.example .env.local
-# Edit .env.local with your API base URL and company ID
+# Edit .env.local with Supabase credentials
 npm run dev
 ```
 
-See detailed setup instructions below.
+### Database Setup
+```bash
+# Apply new schema to Supabase
+psql $DATABASE_URL -f supabase_schema.sql
+```
+
+**📖 See [`MIGRATION_GUIDE.md`](MIGRATION_GUIDE.md) for complete migration instructions.**
 
 ---
 
@@ -56,30 +75,40 @@ See detailed setup instructions below.
 ## 📁 Project Structure
 
 ```
-/                           # Backend (FastAPI)
-├── main.py                 # FastAPI app entry point
-├── database.py             # Supabase connection
-├── smart_parser.py         # OCR text extraction logic
-├── requirements.txt        # Python dependencies
-├── .env.example           # Environment template
+endless/
+├── supabase_schema.sql          # Complete database schema
+├── MIGRATION_GUIDE.md           # Migration instructions
+├── main.py                      # FastAPI app entry point
+├── database.py                  # Supabase connection
+├── smart_parser.py              # OCR text extraction logic
+├── requirements.txt             # Python dependencies
 └── /routes
-    ├── users.py           # User endpoints
-    ├── companies.py       # Company endpoints
-    ├── expenses.py        # Expense tracking
-    ├── parser.py          # Receipt parsing
-    └── ai_overlook.py     # AI validation & suggestions
+    ├── users.py                # User endpoints
+    ├── companies.py            # Company endpoints
+    ├── journals.py             # Journal entry CRUD (NEW)
+    ├── accounts.py             # Chart of Accounts CRUD (NEW)
+    ├── parser.py               # Receipt parsing
+    ├── ai_overlook.py          # AI validation
+    └── ai_insights.py          # AI insights generation (NEW)
 
-/frontend                   # Frontend (Next.js)
-├── /app                   # Next.js app router
-│   ├── layout.tsx         # Root layout
-│   ├── page.tsx           # Dashboard
-│   ├── /expenses          # Expense management
-│   ├── /journals          # Journal entries
-│   ├── /documents         # Receipt parser
-│   └── /ai                # AI console
-├── /components            # Reusable UI components
-├── /lib                   # Utilities (API client)
-└── package.json           # Frontend dependencies
+/frontend                        # Frontend (Next.js)
+├── /app                        # Next.js app router
+│   ├── layout.tsx              # Root layout with sidebar + AI
+│   ├── new-dashboard/          # Smart dashboard (NEW)
+│   ├── new-journals/           # Journal entry system (NEW)
+│   ├── chart-of-accounts/      # COA management (NEW)
+│   ├── ai-insights/            # AI insights page (NEW)
+│   ├── profile/                # User/company settings (NEW)
+│   ├── login/                  # Login page (NEW)
+│   ├── signup/                 # Signup page (NEW)
+│   └── company-setup/          # Onboarding flow (NEW)
+├── /components
+│   ├── NewSidebar.tsx          # 5-module navigation (NEW)
+│   ├── AskAIButton.tsx         # Floating AI chat (NEW)
+│   ├── KpiCard.tsx
+│   └── Table.tsx
+└── /lib
+    └── api.ts                  # API client
 ```
 
 ### What each file does
@@ -282,26 +311,124 @@ curl -X POST http://localhost:8000/parse/ -F "file=@receipt.png"
 
 ## 🎨 Frontend Features
 
-The Next.js frontend (`/frontend`) provides:
+### New System (Redesign)
 
-- **Dashboard**: KPIs, monthly spending insights, system health monitoring
-- **Expenses**: Create expenses with AI-powered suggestions and validation
-- **Parser**: Upload receipts (PNG/JPG/PDF/CSV) and auto-extract fields
-- **Journals**: View double-entry journal records (auto-created from expenses)
-- **AI Console**: Natural language queries about financial data
+#### 📊 Dashboard (`/new-dashboard`)
+- Financial health score
+- Income vs Expenses trend graphs
+- Expense breakdown pie chart
+- Recent transactions
+- AI-generated monthly summary
+
+#### 📖 Journals (`/new-journals`)
+- Standardized double-entry journal form
+- Built-in OCR: Upload receipt → auto-populate journal
+- Debit/Credit auto-validation
+- Account selection from Chart of Accounts
+- Tag vendors, categories, accounts
+- Post → auto-update account balances
+
+#### 🗂️ Chart of Accounts (`/chart-of-accounts`)
+- Upload CSV for bulk import
+- Tree view with expandable accounts
+- Filter by type (Asset, Liability, Equity, Revenue, Expense)
+- Real-time balance updates from posted journals
+- Export to CSV
+
+#### 🤖 AI Insights (`/ai-insights`)
+- **Predictions**: Cash flow, expense trends
+- **Anomalies**: Unusual transactions
+- **Recommendations**: Cost optimization
+- **Summaries**: Monthly financial health
+- Context-aware insights
+
+#### 🎯 Floating "Ask AI" Button
+- Appears on EVERY page
+- Natural language queries
+- Context-aware (knows which page you're on)
+- Explains accounting concepts
+- Quick question shortcuts
+
+#### 🔐 Authentication Flow
+1. **Login/Signup** → Clean auth pages
+2. **Company Setup** → Industry selection, COA import
+3. **Dashboard** → Start using the platform
 
 **Frontend runs on:** http://localhost:3000
-**See:** `/frontend/README.md` for detailed setup instructions
 
 ---
 
-## 👨‍💻 Author
-Endless Moments LLC
-Amogh Dagar 
-Satya Neriyanuru 
-Atiman Rohtagi 
-Ashish Kumar
-Dhruv Bhatt
+## 🗄️ Database Schema
+
+The new schema includes:
+
+- ✅ **accounts** - Chart of Accounts with hierarchy
+- ✅ **journal_entries** - Transaction headers
+- ✅ **journal_lines** - Debit/credit lines
+- ✅ **documents** - OCR-processed files
+- ✅ **contacts** - Vendors and customers
+- ✅ **ai_conversations** - Chat history
+- ✅ **ai_insights** - Generated insights
+- ✅ **audit_logs** - Activity tracking
+- ✅ Row Level Security (RLS)
+- ✅ Automatic triggers for balance updates
+
+**See:** [`supabase_schema.sql`](supabase_schema.sql) for complete schema
+
 ---
 
-🧱 _Built with FastAPI + Supabase + Next.js + OpenAI for a future-ready AI accounting platform._
+## 🚀 Key Features
+
+### 1. Double-Entry Accounting
+- Every transaction must balance (Debit = Credit)
+- Auto-validation before posting
+- Account balances update automatically via database triggers
+
+### 2. OCR Integration
+- Upload receipts directly in journal entry form
+- AI extracts: vendor, amount, date, tax, description
+- Suggests balanced journal entry
+- User reviews and posts
+
+### 3. Dynamic Chart of Accounts
+- CSV upload for bulk import
+- Hierarchical account structure
+- Real-time balance updates
+- Export functionality
+
+### 4. AI Everywhere
+- Floating "Ask AI" button on every page
+- Contextual insights
+- Anomaly detection
+- Expense predictions
+- Concept explanations
+
+### 5. Modern UX
+- Notion-inspired clean design
+- QuickBooks-style workflows
+- Responsive charts (Recharts)
+- Smart loading states
+- Contextual empty states
+
+---
+
+## 📚 Documentation
+
+- **[MIGRATION_GUIDE.md](MIGRATION_GUIDE.md)** - Complete migration instructions
+- **[supabase_schema.sql](supabase_schema.sql)** - Database schema
+- **API Docs** - http://localhost:8000/docs (Swagger)
+
+---
+
+## 👨‍💻 Contributors
+
+**Endless Moments LLC**
+- Amogh Dagar
+- Satya Neriyanuru
+- Atiman Rohtagi
+- Ashish Kumar
+- Dhruv Bhatt
+
+---
+
+🧱 _Built with FastAPI + Supabase + Next.js 14 + OpenAI for modern, AI-powered accounting._
