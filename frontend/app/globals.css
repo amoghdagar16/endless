@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light dark;
+}
+
+@layer base {
+  html, body {
+    @apply bg-bg text-gray-900 dark:bg-neutral-900 dark:text-gray-100;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-bg-card dark:bg-neutral-900 border border-border/70 rounded-2xl shadow-card p-6 transition-all;
+  }
+
+  .kpi {
+    @apply card p-5 flex flex-col gap-1 hover:shadow-elevate transition-shadow duration-200;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center rounded-lg border border-border/70 px-4 py-2 text-sm font-medium hover:bg-bg-muted/60 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply btn bg-brand-500 text-white border-transparent hover:bg-brand-600 hover:shadow-md active:scale-[0.98];
+  }
+
+  .btn-secondary {
+    @apply btn bg-white dark:bg-neutral-800 hover:bg-gray-50 dark:hover:bg-neutral-700;
+  }
+
+  .input {
+    @apply w-full rounded-lg border border-border/70 bg-white dark:bg-neutral-900 px-3 py-2.5 text-sm placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent transition-all duration-200;
+  }
+
+  .label {
+    @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5;
+  }
+
+  .table {
+    @apply w-full text-sm;
+  }
+
+  .table thead th {
+    @apply text-left font-semibold text-gray-500 dark:text-gray-400 border-b border-border pb-3 px-4;
+  }
+
+  .table tbody tr {
+    @apply border-b border-border/50 hover:bg-bg-muted/60 transition-colors duration-150;
+  }
+
+  .table tbody td {
+    @apply px-4 py-3;
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+
+  .skeleton {
+    @apply animate-pulse rounded-lg bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 dark:from-neutral-800 dark:via-neutral-700 dark:to-neutral-800;
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+}
