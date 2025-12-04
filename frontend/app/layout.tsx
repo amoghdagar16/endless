@@ -1,33 +1,39 @@
-import type { Metadata } from "next";
-import "./globals.css";
-import Sidebar from "@/components/Sidebar";
-import Topbar from "@/components/Topbar";
+import './globals.css'
+import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
+import NewSidebar from '@/components/NewSidebar'
+import AskAIButton from '@/components/AskAIButton'
+
+const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: "MiniBooks - AI Financial Companion",
-  description: "QuickBooks-style financial management with AI oversight",
-};
+  title: 'Endless - Smart Accounting Platform',
+  description: 'AI-powered accounting and financial management',
+}
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: React.ReactNode
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body>
-        <div className="flex h-screen overflow-hidden bg-bg dark:bg-neutral-900">
-          <Sidebar />
-          <div className="flex-1 ml-60 flex flex-col">
-            <Topbar />
-            <main className="flex-1 overflow-y-auto mt-16 p-6 md:p-8">
-              <div className="max-w-7xl mx-auto">
-                {children}
-              </div>
+    <html lang="en">
+      <body className={inter.className}>
+        <div className="flex h-screen bg-gray-50">
+          {/* Sidebar */}
+          <NewSidebar />
+
+          {/* Main Content */}
+          <div className="flex-1 ml-64 overflow-auto">
+            <main className="min-h-screen">
+              {children}
             </main>
           </div>
+
+          {/* Floating Ask AI Button */}
+          <AskAIButton />
         </div>
       </body>
     </html>
-  );
+  )
 }
