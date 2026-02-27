@@ -54,9 +54,9 @@ const STEP_INFO = [
 
 export default function OnboardingPage() {
   const router = useRouter()
-  const { user, refreshUser } = useAuth()
+  const { user, company: authCompany, refreshUser } = useAuth()
   const { theme, toggleTheme } = useTheme()
-  const [step, setStep] = useState(1)
+  const [step, setStep] = useState(0) // 0 = landing, 1–4 = form steps
   const [loading, setLoading] = useState(false)
   const [initialLoading, setInitialLoading] = useState(true)
   const [companyId, setCompanyId] = useState('')
@@ -97,29 +97,41 @@ export default function OnboardingPage() {
   }, [])
 
   useEffect(() => {
-    // Load existing company data if available
     const loadCompanyData = async () => {
       try {
         const response = await api.get('/companies/')
         if (response.data && response.data.length > 0) {
           const company = response.data[0]
+          if (company.onboarding_completed) {
+            router.replace('/new-dashboard')
+            return
+          }
           setCompanyId(company.id)
-
-          // Pre-fill form if data exists
           setFormData(prev => ({
             ...prev,
             ...company,
             primary_products: company.primary_products || [],
             competitors: company.competitors || []
           }))
-
-          // Resume from last step if onboarding not completed
           if (!company.onboarding_completed && company.onboarding_step) {
-            setStep(Math.min(company.onboarding_step, 3)) // Don't go to step 4 automatically
+            setStep(Math.min(company.onboarding_step, 3))
           }
+        } else if (authCompany?.id) {
+          // Auth has company but API returned [] (e.g. race) — use auth company so we PATCH, not POST
+          setCompanyId(authCompany.id)
+          setFormData(prev => ({
+            ...prev,
+            ...authCompany,
+            primary_products: authCompany.primary_products || [],
+            competitors: authCompany.competitors || []
+          }))
         }
+        // No company = first time; stay on step 0 (landing)
       } catch (error) {
         console.error('Failed to load company data:', error)
+        if (authCompany?.id) {
+          setCompanyId(authCompany.id)
+        }
       } finally {
         setInitialLoading(false)
       }
@@ -130,7 +142,7 @@ export default function OnboardingPage() {
     } else {
       setInitialLoading(false)
     }
-  }, [user])
+  }, [user, authCompany?.id])
 
   const handleInputChange = useCallback((field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -171,7 +183,10 @@ export default function OnboardingPage() {
     }))
   }, [])
 
-  const saveProgress = async (targetStep: number, isComplete: boolean = false): Promise<boolean> => {
+  const saveProgress = async (
+    targetStep: number,
+    isComplete: boolean = false
+  ): Promise<{ success: boolean; companyId?: string }> => {
     try {
       setLoading(true)
       setError('')
@@ -182,60 +197,68 @@ export default function OnboardingPage() {
         onboarding_completed: isComplete
       }
 
-      if (companyId) {
-        await api.patch(`/companies/${companyId}`, updateData)
+      // Use existing company if we have it (auth or state) so we always PATCH, never create a duplicate
+      const existingId = companyId || authCompany?.id
+      let resolvedCompanyId: string | undefined = existingId || undefined
+
+      if (existingId) {
+        await api.patch(`/companies/${existingId}`, updateData)
+        resolvedCompanyId = existingId
+        if (!companyId) setCompanyId(existingId)
       } else {
+        // POST auto-links user to company on the backend
         const response = await api.post('/companies/', updateData)
-
-        // Backend returns { status: "success", data: [...] }
-        if (response.status === 'success' && response.data && response.data.length > 0) {
-          const newCompanyId = response.data[0].id
+        const data = response?.data
+        if (response?.status === 'success' && Array.isArray(data) && data.length > 0) {
+          const newCompanyId = data[0].id
+          if (!newCompanyId) throw new Error('Company created but no id returned')
           setCompanyId(newCompanyId)
-
-          // Update user with company_id
-          if (user) {
-            await api.patch(`/users/${user.id}`, {
-              company_id: newCompanyId
-            })
-          }
+          resolvedCompanyId = newCompanyId
         } else {
-          throw new Error('Failed to create company')
+          throw new Error(typeof response?.detail === 'string' ? response.detail : 'Failed to create company')
         }
       }
 
-      return true
+      return { success: true, companyId: resolvedCompanyId }
     } catch (error: any) {
       console.error('Failed to save progress:', error)
-      setError(error.response?.data?.detail || error.message || 'Failed to save. Please try again.')
-      return false
+      const detail = error?.response?.data?.detail
+      const message = Array.isArray(detail) ? detail[0]?.msg || String(detail) : detail
+      setError(message || error?.message || 'Failed to save. Please try again.')
+      return { success: false }
     } finally {
       setLoading(false)
     }
   }
 
+  const startOnboarding = () => {
+    setStep(1)
+    setError('')
+  }
+
   const nextStep = async () => {
-    // Optimistic UI - immediately show next step
     const nextStepNum = step + 1
     setStep(nextStepNum)
 
-    // Save in background
-    const success = await saveProgress(nextStepNum)
-    if (!success) {
-      // Revert on failure
+    const result = await saveProgress(nextStepNum)
+    if (!result.success) {
       setStep(step)
     }
   }
 
   const prevStep = () => {
-    setStep(step - 1)
+    if (step === 1) {
+      setStep(0) // Back to landing
+    } else {
+      setStep(step - 1)
+    }
     setError('')
   }
 
   const completeOnboarding = async () => {
     setLoading(true)
-    const success = await saveProgress(4, true)
-    if (success) {
-      // Refresh auth context to get updated company data
+    const result = await saveProgress(4, true)
+    if (result.success) {
       await refreshUser()
       router.push('/new-dashboard')
     }
@@ -243,13 +266,13 @@ export default function OnboardingPage() {
   }
 
   const canProceed = useCallback(() => {
+    if (step === 0) return true
     switch (step) {
       case 1:
         return !!(formData.name && formData.industry && formData.location_city && formData.location_state)
       case 2:
         return !!(formData.business_type && formData.growth_stage)
       case 3:
-        return true // Optional fields
       case 4:
         return true
       default:
@@ -257,7 +280,7 @@ export default function OnboardingPage() {
     }
   }, [step, formData])
 
-  const StepIcon = STEP_INFO[step - 1]?.icon || Building2
+  const StepIcon = step >= 1 ? (STEP_INFO[step - 1]?.icon || Building2) : Building2
 
   if (!mounted || initialLoading) {
     return (
@@ -321,9 +344,43 @@ export default function OnboardingPage() {
             : '0 20px 60px rgba(0, 0, 0, 0.1)'
         }}
       >
+        {/* Step 0: Onboarding landing page */}
+        {step === 0 && (
+          <div className="text-center py-6">
+            <div
+              className="inline-flex p-4 rounded-2xl mb-6"
+              style={{
+                backgroundColor: theme === 'dark' ? 'rgba(34, 211, 238, 0.1)' : 'rgba(34, 211, 238, 0.15)',
+                border: '1px solid var(--neon-cyan)'
+              }}
+            >
+              <Building2 className="w-12 h-12" style={{ color: 'var(--neon-cyan)' }} />
+            </div>
+            <h1 className="text-2xl md:text-3xl font-bold mb-3" style={{ color: 'var(--text-primary)' }}>
+              Set up your company
+            </h1>
+            <p className="text-base mb-8 max-w-md mx-auto" style={{ color: 'var(--text-secondary)' }}>
+              A few quick steps to connect your business to Endless. We’ll link your account and company so you can use the full app.
+            </p>
+            <button
+              type="button"
+              onClick={startOnboarding}
+              className="px-8 py-3 rounded-xl font-semibold text-white transition-all hover:opacity-90"
+              style={{
+                background: 'linear-gradient(90deg, var(--neon-fuchsia), var(--neon-cyan))',
+                boxShadow: '0 10px 40px rgba(217, 70, 239, 0.3)'
+              }}
+            >
+              Get started
+            </button>
+          </div>
+        )}
+
+        {/* Steps 1–4: Form */}
+        {step >= 1 && (
+          <>
         {/* Progress Header */}
         <div className="mb-8">
-          {/* Step indicator pills */}
           <div className="flex gap-2 mb-4">
             {[1, 2, 3, 4].map(i => (
               <div
@@ -338,7 +395,6 @@ export default function OnboardingPage() {
             ))}
           </div>
 
-          {/* Step info */}
           <div className="flex items-center gap-4">
             <div
               className="p-3 rounded-xl transition-colors"
@@ -789,7 +845,7 @@ export default function OnboardingPage() {
 
         {/* Navigation Buttons */}
         <div className="flex justify-between gap-4">
-          {step > 1 && step < 4 && (
+          {step >= 1 && step < 4 && (
             <button
               onClick={prevStep}
               className="px-5 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2"
@@ -863,6 +919,8 @@ export default function OnboardingPage() {
           <p className="text-xs text-center mt-4" style={{ color: 'var(--neon-fuchsia)' }}>
             Please fill in all required fields marked with *
           </p>
+        )}
+          </>
         )}
       </div>
     </div>

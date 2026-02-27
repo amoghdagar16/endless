@@ -35,14 +35,15 @@ Copy `.env.local.example` to `.env.local`:
 cp .env.local.example .env.local
 ```
 
-Edit `.env.local`:
+Edit `.env.local` (see `.env.local.example`):
 
 ```env
 NEXT_PUBLIC_API_BASE=http://localhost:8000
-NEXT_PUBLIC_COMPANY_ID=<your-company-uuid>
+NEXT_PUBLIC_SUPABASE_URL=https://yourproject.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
 ```
 
-> Get your company UUID from the backend by creating a company or querying `/companies/`
+> For auth to work, use the same Supabase project as the backend. Optional: `NEXT_PUBLIC_COMPANY_ID` to pre-fill company in dev.
 
 ### 3. Start Development Server
 

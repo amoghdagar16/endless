@@ -27,29 +27,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
 
   const fetchUserData = async (authUser: SupabaseUser) => {
-    if (!supabase) return
     try {
-      // Fetch user data from the users table
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', authUser.id)
-        .single()
+      // Fetch user via backend API (bypasses broken RLS on users table)
+      let userResp = await api.get(`/users/${authUser.id}`)
+      let userData = userResp?.data
 
-      if (userError) throw userError
+      // If user row doesn't exist, create it via backend
+      if (!userData) {
+        const fullName = authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'User'
+        await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/users/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: authUser.id,
+            email: authUser.email,
+            full_name: fullName,
+            role: 'admin',
+          }),
+        })
+        userResp = await api.get(`/users/${authUser.id}`)
+        userData = userResp?.data
+      }
+
+      if (!userData) return
 
       setUser(userData)
 
-      // Fetch company data if user has a company
+      // Fetch company via backend API
       if (userData.company_id) {
-        const { data: companyData, error: companyError } = await supabase
-          .from('companies')
-          .select('*')
-          .eq('id', userData.company_id)
-          .single()
-
-        if (companyError) throw companyError
-        setCompany(companyData)
+        try {
+          const companyResp = await api.get('/companies/')
+          const companyData = companyResp?.data?.[0]
+          if (companyData) setCompany(companyData)
+        } catch {
+          console.error('Failed to load company data')
+        }
       }
     } catch (error) {
       console.error('Error fetching user data:', error)
@@ -63,10 +75,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return
     }
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSupabaseUser(session?.user ?? null)
       if (session?.user) {
-        fetchUserData(session.user)
+        await fetchUserData(session.user)
       }
       setLoading(false)
     })
@@ -76,12 +88,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSupabaseUser(session?.user ?? null)
       if (session?.user) {
-        fetchUserData(session.user)
+        fetchUserData(session.user).finally(() => setLoading(false))
       } else {
         setUser(null)
         setCompany(null)
+        setLoading(false)
       }
-      setLoading(false)
     })
 
     return () => subscription.unsubscribe()
@@ -89,7 +101,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string, fullName: string) => {
     if (!supabase) {
-      throw new Error('Supabase client not configured.')
+      throw new Error(
+        'Authentication requires Supabase. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to .env.local, set NEXT_PUBLIC_DEMO_MODE=false, and restart the dev server. Get keys from Supabase Dashboard → Project Settings → API.'
+      )
     }
     try {
       const redirectUrl = typeof window !== 'undefined'
@@ -111,7 +125,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (data.user) {
         // Create user record via backend API (uses service_role key, bypasses RLS)
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/users/`, {
+        const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000'
+        const response = await fetch(`${apiBase}/users/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -139,7 +154,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     if (!supabase) {
-      throw new Error('Supabase client not configured.')
+      throw new Error(
+        'Authentication requires Supabase. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to .env.local, set NEXT_PUBLIC_DEMO_MODE=false, and restart the dev server. Get keys from Supabase Dashboard → Project Settings → API.'
+      )
     }
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -150,21 +167,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error
 
       if (data.user) {
+        // Ensure user row exists in the users table (may be missing after schema reset)
+        const { data: existingUser } = await supabase
+          .from('users')
+          .select('id')
+          .eq('id', data.user.id)
+          .maybeSingle()
+
+        if (!existingUser) {
+          const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000'
+          await fetch(`${apiBase}/users/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: data.user.id,
+              email: data.user.email,
+              full_name: data.user.user_metadata?.full_name || data.user.email || 'User',
+              role: 'admin',
+            }),
+          })
+        }
+
         await fetchUserData(data.user)
 
-        // Check if user has completed onboarding
-        const { data: userData } = await supabase
-          .from('users')
-          .select('company_id, companies(onboarding_completed)')
-          .eq('id', data.user.id)
-          .single()
+        // Check onboarding status via backend API (bypasses RLS)
+        try {
+          const companyResp = await api.get('/companies/')
+          const companyData = companyResp?.data?.[0]
 
-        if (!userData?.company_id) {
+          if (!companyData) {
+            router.push('/onboarding')
+          } else if (!companyData.onboarding_completed) {
+            router.push('/onboarding')
+          } else {
+            router.push('/new-dashboard')
+          }
+        } catch {
           router.push('/onboarding')
-        } else if (!(userData.companies as any)?.onboarding_completed) {
-          router.push('/onboarding')
-        } else {
-          router.push('/new-dashboard')
         }
       }
     } catch (error: any) {

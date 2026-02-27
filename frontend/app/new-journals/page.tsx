@@ -10,7 +10,8 @@ import {
   Camera,
   FileText,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Trash2
 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { useAuth } from '@/contexts/AuthContext'
@@ -43,7 +44,7 @@ const createEmptyEntry = (): JournalEntry => ({
 })
 
 export default function NewJournals() {
-  const { company } = useAuth()
+  const { company, loading: authLoading } = useAuth()
   const companyId = company?.id || null
   const [isCreating, setIsCreating] = useState(false)
   const [journalEntry, setJournalEntry] = useState<JournalEntry>(createEmptyEntry())
@@ -56,10 +57,14 @@ export default function NewJournals() {
   const resetEntry = () => setJournalEntry(createEmptyEntry())
 
   useEffect(() => {
-    if (!companyId) return
-    fetchAccounts(companyId)
-    fetchRecentJournals(companyId)
-  }, [companyId])
+    if (authLoading) return
+    if (companyId) {
+      fetchAccounts(companyId)
+      fetchRecentJournals(companyId)
+    } else {
+      setLoading(false)
+    }
+  }, [companyId, authLoading])
 
   useEffect(() => {
     if (!toast) return
@@ -74,7 +79,7 @@ export default function NewJournals() {
         id: acc.id,
         code: acc.account_code,
         name: acc.account_name,
-        type: acc.type
+        type: acc.account_type
       }))
       setAccounts(accountsData)
     } catch (error) {
@@ -158,34 +163,41 @@ export default function NewJournals() {
     formData.append('file', file)
 
     try {
-      const response = await api.post('/parse', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      })
+      const response = await api.postFormData<{
+        parsed_fields: { vendor?: string; date?: string; total?: string; amount?: number; memo?: string; invoice_number?: string }
+      }>('/parse/', formData)
 
-      const { extracted_data } = response.data
+      const pf = response?.parsed_fields || {}
+      const amount = typeof pf.amount === 'number' ? pf.amount : (typeof pf.total === 'string' ? parseFloat(pf.total.replace(/[,$]/g, '')) || 0 : 0)
+      const dateNorm = pf.date ? (pf.date.includes('-') && pf.date.length >= 10 ? pf.date : (() => {
+        const parts = pf.date!.split(/[/-]/)
+        const [m, d, y] = parts
+        if (!y) return journalEntry.date
+        const yy = y.length === 2 ? `20${y}` : y
+        return `${yy}-${(m || '').padStart(2, '0')}-${(d || '').padStart(2, '0')}`
+      })()) : journalEntry.date
 
-      // Auto-populate journal entry from OCR
       setJournalEntry({
         ...journalEntry,
-        memo: extracted_data.memo || extracted_data.vendor || '',
-        referenceNumber: extracted_data.invoice_number || '',
-        date: extracted_data.date || journalEntry.date,
+        memo: pf.memo || pf.vendor || '',
+        referenceNumber: pf.invoice_number || '',
+        date: dateNorm,
         attachedFile: file,
         lines: [
           {
             id: Date.now().toString(),
             accountId: '',
             accountName: '',
-            description: extracted_data.vendor || 'Expense',
+            description: pf.vendor || 'Expense',
             debit: 0,
-            credit: extracted_data.amount || 0
+            credit: amount
           },
           {
             id: (Date.now() + 1).toString(),
             accountId: '',
             accountName: '',
             description: 'Cash payment',
-            debit: extracted_data.amount || 0,
+            debit: amount,
             credit: 0
           }
         ]
@@ -264,13 +276,55 @@ export default function NewJournals() {
     }
   }
 
+  const deleteJournalEntry = async (journalId: string) => {
+    if (!companyId) return
+    if (!confirm('Delete this journal entry? This will reverse the account balances.')) return
+    try {
+      await api.delete(`/journals/${journalId}`)
+      setToast({ type: 'success', message: 'Journal entry deleted.' })
+      fetchRecentJournals(companyId)
+    } catch (error: any) {
+      const detail = error?.response?.data?.detail
+      setToast({
+        type: 'error',
+        message: typeof detail === 'string' ? detail : 'Failed to delete journal entry.',
+      })
+    }
+  }
+
   const { totalDebit, totalCredit } = calculateTotals()
   const balanced = isBalanced()
 
+  if (authLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 text-center">
+        <FileText className="w-16 h-16 text-gray-400 dark:text-white/30 mb-4" />
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No company set up yet</h2>
+        <p className="text-gray-600 dark:text-white/60 max-w-md mb-6">
+          Finish onboarding and link your company to use journals.
+        </p>
+        <a
+          href="/onboarding"
+          className="px-4 py-2 rounded-full bg-gradient-to-r from-fuchsia-500 to-indigo-500 text-sm font-semibold text-white"
+        >
+          Complete onboarding
+        </a>
+      </div>
+    )
+  }
+
   if (!companyId) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-slate-950">
-        <Loader2 className="w-8 h-8 text-fuchsia-500 dark:text-fuchsia-300 animate-spin" />
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-8 bg-gray-50 dark:bg-slate-950">
+        <p className="text-gray-600 dark:text-white/70 text-center max-w-md">
+          No company linked to your account. Complete onboarding to create journal entries.
+        </p>
+        <a
+          href="/onboarding"
+          className="px-4 py-2 rounded-full bg-fuchsia-500 text-white text-sm font-medium hover:bg-fuchsia-600 transition-colors"
+        >
+          Go to onboarding
+        </a>
       </div>
     )
   }
@@ -528,17 +582,26 @@ export default function NewJournals() {
                     <p className="text-lg font-semibold text-gray-900 dark:text-white">{journal.journal_number || 'Pending #'}</p>
                     <p className="text-sm text-gray-600 dark:text-white/60 mt-1">{journal.memo || 'No memo provided'}</p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-xl font-semibold text-gray-900 dark:text-white">${journal.total_debit?.toLocaleString() || '0.00'}</p>
-                    <span
-                      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                        journal.status === 'posted'
-                          ? 'bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-200'
-                          : 'bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-white/70'
-                      }`}
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <p className="text-xl font-semibold text-gray-900 dark:text-white">${journal.total_debit?.toLocaleString() || '0.00'}</p>
+                      <span
+                        className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                          journal.status === 'posted'
+                            ? 'bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-200'
+                            : 'bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-white/70'
+                        }`}
+                      >
+                        {journal.status || 'draft'}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => deleteJournalEntry(journal.id)}
+                      className="p-2 rounded-xl text-gray-400 dark:text-white/30 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition"
+                      title="Delete entry"
                     >
-                      {journal.status || 'draft'}
-                    </span>
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
                 {journal.journal_lines && journal.journal_lines.length > 0 && (

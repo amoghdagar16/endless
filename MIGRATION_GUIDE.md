@@ -105,8 +105,9 @@ This is a **complete redesign** of the Endless accounting system following prope
 
 ```
 endless/
-├── supabase_schema.sql          # Complete database schema
-├── MIGRATION_GUIDE.md           # This file
+├── newschema.sql                # Canonical merged schema (this branch) — use this
+├── supabase_schema.sql         # Legacy complete schema
+├── MIGRATION_GUIDE.md          # This file
 │
 ├── frontend/
 │   ├── app/
@@ -137,8 +138,16 @@ endless/
 
 ### 1. Database Migration
 
+**On this branch, use `newschema.sql`** — the canonical merged schema (COA, banking, AR/AP, reconciliation, period close, triggers).
+
 ```bash
-# Apply new schema to Supabase
+# Apply canonical schema to Supabase (recommended for this branch)
+psql $DATABASE_URL -f newschema.sql
+```
+
+Alternatively, use the legacy schema:
+
+```bash
 psql $DATABASE_URL -f supabase_schema.sql
 ```
 

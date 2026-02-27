@@ -11,7 +11,12 @@ import {
   Building2,
   Menu,
   PanelRight,
-  Globe
+  Globe,
+  Landmark,
+  FileText,
+  Receipt,
+  BarChart3,
+  CalendarCheck
 } from 'lucide-react'
 import { useMemo } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -25,16 +30,21 @@ interface SidebarProps {
 
 const navigation = [
   { name: 'Dashboard', href: '/new-dashboard', icon: LayoutDashboard },
+  { name: 'Banking', href: '/banking', icon: Landmark },
   { name: 'Journals', href: '/new-journals', icon: BookOpen },
   { name: 'Chart of Accounts', href: '/chart-of-accounts', icon: FolderTree },
-  { name: 'Ask AI', href: '/ai', icon: Sparkles },
+  { name: 'Invoices', href: '/invoices', icon: FileText },
+  { name: 'Bills', href: '/bills', icon: Receipt },
+  { name: 'Reports', href: '/reports', icon: BarChart3 },
+  { name: 'Month-end', href: '/month-end', icon: CalendarCheck },
   { name: 'Profile', href: '/profile', icon: User },
-  { name: 'Company', href: '/company', icon: Globe }
+  { name: 'Ask AI', href: '/ai', icon: Sparkles },
+  { name: 'Company', href: '/profile?tab=company', icon: Globe }
 ]
 
 export default function NewSidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname()
-  const { user, company } = useAuth()
+  const { user, company, loading: authLoading } = useAuth()
   const { theme } = useTheme()
   const isDark = theme === 'dark'
 
@@ -196,10 +206,10 @@ export default function NewSidebar({ collapsed, onToggle }: SidebarProps) {
                   className="min-w-0"
                 >
                   <p className="truncate text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                    {company?.name || 'Demo Company'}
+                    {authLoading ? 'Loading...' : (company?.name || (user ? 'Complete setup' : 'Demo Company'))}
                   </p>
                   <p className="truncate text-xs" style={{ color: 'var(--text-muted)' }}>
-                    {user?.email || 'demo@endless.finance'}
+                    {authLoading ? '...' : (user?.email || 'demo@endless.finance')}
                   </p>
                 </motion.div>
               )}

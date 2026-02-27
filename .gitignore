@@ -9,9 +9,13 @@ env/
 ENV/
 .venv
 
-# Environment variables
+# Environment variables and secrets (never commit real keys)
 .env
 .env.local
+.env.secrets
+.env.*.local
+frontend/.env.local
+*.secrets
 
 # IDE
 .vscode/

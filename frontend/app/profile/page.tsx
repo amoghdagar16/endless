@@ -22,12 +22,16 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { api } from '@/lib/api'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 export default function Profile() {
-  const { user, company, signOut, refreshUser, loading: authLoading } = useAuth()
+  const { user, supabaseUser, company, signOut, refreshUser, loading: authLoading } = useAuth()
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState<'personal' | 'company'>('personal')
+  const searchParams = useSearchParams()
+  const tabFromUrl = searchParams.get('tab')
+  const [activeTab, setActiveTab] = useState<'personal' | 'company'>(
+    tabFromUrl === 'company' ? 'company' : 'personal'
+  )
   const [loading, setLoading] = useState(false)
   const [personalInfo, setPersonalInfo] = useState({
     fullName: '',
@@ -67,6 +71,11 @@ export default function Profile() {
     taxId: '',
     fiscalYearEnd: ''
   })
+
+  useEffect(() => {
+    const tab = searchParams.get('tab')
+    if (tab === 'company' || tab === 'personal') setActiveTab(tab)
+  }, [searchParams])
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -167,10 +176,10 @@ export default function Profile() {
         competitors: companyInfo.competitors,
 
         // Legacy fields
-        email: companyInfo.email,
-        phone: companyInfo.phone,
-        tax_id: companyInfo.taxId,
-        fiscal_year_end: companyInfo.fiscalYearEnd
+        email: companyInfo.email || null,
+        phone: companyInfo.phone || null,
+        tax_id: companyInfo.taxId || null,
+        fiscal_year_end: companyInfo.fiscalYearEnd || null
       })
       await refreshUser()
       alert('Company information saved!')

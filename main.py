@@ -1,7 +1,29 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database import table
-from routes import users, companies, expenses, parser, ai_overlook, accounts, journals, dashboard, ai_insights, ai_research
+from routes import (
+    users,
+    companies,
+    expenses,
+    parser,
+    ai_overlook,
+    accounts,
+    journals,
+    dashboard,
+    ai_insights,
+    ai_research,
+    coa_templates,
+    banking,
+    contacts,
+    invoices,
+    payments,
+    bills,
+    bill_payments,
+    accounting_periods,
+    reconciliation,
+    reports,
+    documents,
+)
 
 app = FastAPI(title="AI Financial Companion Backend")
 
@@ -30,10 +52,22 @@ app.include_router(accounts.router, prefix="/accounts", tags=["accounts"])
 app.include_router(journals.router, prefix="/journals", tags=["journals"])
 app.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 app.include_router(ai_insights.router, prefix="/ai-insights", tags=["ai-insights"])
-app.include_router(ai_research.router)  # Already has /ai/research prefix
+app.include_router(ai_research.router)
 app.include_router(expenses.router)
 app.include_router(parser.router)
 app.include_router(ai_overlook.router)
+# New schema flow: COA onboarding, banking, AR/AP, period close, reports
+app.include_router(coa_templates.router)
+app.include_router(banking.router)
+app.include_router(contacts.router)
+app.include_router(invoices.router)
+app.include_router(payments.router)
+app.include_router(bills.router)
+app.include_router(bill_payments.router)
+app.include_router(accounting_periods.router)
+app.include_router(reconciliation.router)
+app.include_router(reports.router)
+app.include_router(documents.router)
 
 @app.get("/")
 def read_root():

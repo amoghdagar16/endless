@@ -29,7 +29,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       }}
     >
       {/* Neon background effects - preserved in both themes with adjusted opacity */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+      <div className="pointer-events-none fixed inset-0 overflow-hidden print:hidden">
         <div
           className="absolute -top-32 left-1/4 h-96 w-96 rounded-full blur-[200px] transition-opacity duration-500"
           style={{ backgroundColor: 'var(--neon-fuchsia)', opacity: 'var(--glow-opacity)' }}
@@ -44,12 +44,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         />
       </div>
 
-      <NewSidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(prev => !prev)} />
+      <div className="print:hidden">
+        <NewSidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(prev => !prev)} />
+      </div>
 
       {/* Theme toggle button */}
       <button
         onClick={toggleTheme}
-        className="fixed top-4 right-4 z-50 p-3 rounded-full backdrop-blur-xl transition-all duration-300 hover:scale-105"
+        className="fixed top-4 right-4 z-50 p-3 rounded-full backdrop-blur-xl transition-all duration-300 hover:scale-105 print:hidden"
         style={{
           backgroundColor: 'var(--bg-card)',
           border: '1px solid var(--border-color)',
@@ -67,13 +69,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </button>
 
       <div
-        className="relative z-10 min-h-screen transition-[margin-left] duration-300 ease-out"
+        className="relative z-10 min-h-screen transition-[margin-left] duration-300 ease-out print:!ml-0"
         style={{ marginLeft: sidebarWidth }}
       >
         <main className="min-h-screen">{children}</main>
       </div>
 
-      <AskAIButton />
+      <div className="print:hidden">
+        <AskAIButton />
+      </div>
     </div>
   )
 }

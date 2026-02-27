@@ -89,13 +89,26 @@ def create_account(account: AccountCreate, auth: Dict[str, str] = Depends(get_cu
         print(f"Error creating account: {e}")
         raise HTTPException(status_code=400, detail=str(e))
 
+def _account_update_to_db(account: AccountUpdate) -> dict:
+    """Map Pydantic AccountUpdate fields to DB column names."""
+    raw = {k: v for k, v in account.dict().items() if v is not None}
+    db_data = {}
+    key_map = {
+        "type": "account_type",
+        "subtype": "account_subtype",
+        "balance": "current_balance",
+    }
+    for k, v in raw.items():
+        db_data[key_map.get(k, k)] = v
+    return db_data
+
+
 @router.patch("/{account_id}")
 def update_account(account_id: str, account: AccountUpdate, auth: Dict[str, str] = Depends(get_current_user_company)):
     """Update an existing account"""
     company_id = auth["company_id"]
 
-    # Only include fields that are provided
-    update_data = {k: v for k, v in account.dict().items() if v is not None}
+    update_data = _account_update_to_db(account)
 
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields to update")

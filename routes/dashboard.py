@@ -32,7 +32,7 @@ def get_dashboard_stats(company_id: str, auth: Dict[str, str] = Depends(get_curr
     }
 
     for account in accounts:
-        acc_type = account.get("type", "")  # Database field is "type" not "account_type"
+        acc_type = account.get("account_type", "")
         balance = account.get("current_balance", 0) or 0
         if acc_type in totals:
             totals[acc_type] += balance
@@ -71,8 +71,14 @@ def get_dashboard_stats(company_id: str, auth: Dict[str, str] = Depends(get_curr
     }
 
 @router.get("/monthly-trend/{company_id}")
-def get_monthly_trend(company_id: str, months: int = 6):
+def get_monthly_trend(
+    company_id: str,
+    months: int = 6,
+    auth: Dict[str, str] = Depends(get_current_user_company),
+):
     """Get monthly income and expense trend"""
+    if auth["company_id"] != company_id:
+        raise HTTPException(status_code=403, detail="Cannot access another company's dashboard")
 
     # Get journal entries from the last N months
     start_date = (datetime.now() - timedelta(days=months * 30)).strftime("%Y-%m-%d")
@@ -85,12 +91,12 @@ def get_monthly_trend(company_id: str, months: int = 6):
 
     # Get all accounts for this company
     accounts_response = supabase.table("accounts")\
-        .select("id, type")\
+        .select("id, account_type")\
         .eq("company_id", company_id)\
         .execute()
 
     # Create account lookup map
-    account_types = {acc["id"]: acc["type"] for acc in (accounts_response.data or [])}
+    account_types = {acc["id"]: acc["account_type"] for acc in (accounts_response.data or [])}
 
     # Aggregate by month
     monthly_data = defaultdict(lambda: {"income": 0, "expenses": 0})
@@ -127,14 +133,19 @@ def get_monthly_trend(company_id: str, months: int = 6):
     return trend
 
 @router.get("/category-breakdown/{company_id}")
-def get_category_breakdown(company_id: str):
+def get_category_breakdown(
+    company_id: str,
+    auth: Dict[str, str] = Depends(get_current_user_company),
+):
     """Get expense breakdown by category/account"""
+    if auth["company_id"] != company_id:
+        raise HTTPException(status_code=403, detail="Cannot access another company's dashboard")
 
     # Get all expense accounts with balances
     accounts_response = supabase.table("accounts")\
         .select("account_name, current_balance")\
         .eq("company_id", company_id)\
-        .eq("type", "expense")\
+        .eq("account_type", "expense")\
         .gt("current_balance", 0)\
         .execute()
 
@@ -165,8 +176,14 @@ def get_category_breakdown(company_id: str):
     return breakdown
 
 @router.get("/recent-transactions/{company_id}")
-def get_recent_transactions(company_id: str, limit: int = 10):
+def get_recent_transactions(
+    company_id: str,
+    limit: int = 10,
+    auth: Dict[str, str] = Depends(get_current_user_company),
+):
     """Get recent journal entries"""
+    if auth["company_id"] != company_id:
+        raise HTTPException(status_code=403, detail="Cannot access another company's dashboard")
 
     response = supabase.table("journal_entries")\
         .select("id, journal_number, entry_date, memo, total_debit, total_credit, status")\

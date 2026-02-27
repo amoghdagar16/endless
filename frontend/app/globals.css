@@ -185,6 +185,126 @@ html.dark,
     text-shadow: 0 0 20px var(--neon-emerald);
   }
 
+  /* ── Hide print header on screen ── */
+  .rpt-print-header { display: none; }
+
+  /* ── Print: A4, identical look to screen, chrome hidden ── */
+  @media print {
+    @page {
+      size: A4 portrait;
+      margin: 15mm 18mm;
+    }
+
+    /* Force white background everywhere, keep text dark */
+    html, body {
+      background: white !important;
+      color: #111 !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    /* Hide app chrome (sidebar, tabs, header, AI button, date pickers) */
+    .print\:hidden { display: none !important; }
+
+    /* Remove sidebar left-margin from main content */
+    .print\:\!ml-0 { margin-left: 0 !important; }
+
+    /* Remove page-level padding/margin on the reports wrapper */
+    .print\:p-0   { padding: 0 !important; }
+    .print\:m-0   { margin: 0 !important; }
+    .print\:max-w-none { max-width: 100% !important; }
+
+    /* Report card: fill the page, no dark background, no rounded border */
+    .rpt-container {
+      border: none !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      background: white !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      max-width: 100% !important;
+      width: 100% !important;
+    }
+
+    /* Show print letterhead (hidden on screen) */
+    .rpt-print-header {
+      display: block !important;
+      text-align: center;
+      margin-bottom: 18px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #111;
+    }
+
+    .rpt-print-company {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: #111;
+      margin-bottom: 2px;
+    }
+
+    .rpt-print-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #111;
+      margin-bottom: 2px;
+    }
+
+    .rpt-print-date {
+      font-size: 11px;
+      color: #555;
+    }
+
+    /* Section title buttons → styled divs */
+    .rpt-section-title {
+      background: none !important;
+      border: none !important;
+      cursor: default !important;
+      color: #111 !important;
+    }
+
+    /* Hide collapse chevrons */
+    .rpt-chevron { display: none !important; }
+
+    /* All text forced dark */
+    .rpt-account-row,
+    .rpt-total-cat,
+    .rpt-total-section,
+    .rpt-total-grand,
+    .rpt-tb-header,
+    .rpt-tb-row,
+    .rpt-tb-totals,
+    .rpt-footer {
+      color: #111 !important;
+      background: none !important;
+    }
+
+    /* Total row borders: keep existing screen styles but force dark colors */
+    .rpt-total-cat   { border-color: #666 !important; }
+    .rpt-total-section { border-color: #111 !important; }
+    .rpt-total-grand   { border-color: #111 !important; }
+
+    /* Red negative amounts → black in print (parentheses convey the sign) */
+    .rpt-account-row span,
+    .rpt-total-cat span,
+    .rpt-total-section span,
+    .rpt-total-grand span {
+      color: #111 !important;
+    }
+
+    /* Footer */
+    .rpt-footer {
+      border-color: #ccc !important;
+      font-size: 10px !important;
+      color: #555 !important;
+    }
+
+    /* Trial balance table borders */
+    .rpt-tb-header { border-color: #111 !important; }
+    .rpt-tb-row    { border-color: #ddd !important; }
+    .rpt-tb-totals { border-color: #111 !important; }
+  }
+
   /* Theme-aware surfaces */
   .surface {
     background-color: var(--bg-secondary);

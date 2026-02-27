@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from database import table
+from middleware.auth import verify_token
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -36,14 +37,23 @@ def create_user(user: dict):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# Update a user
+# Update a user (authenticated user can only update their own record)
 @router.patch("/{user_id}")
-def update_user(user_id: str, update_data: dict):
+def update_user(user_id: str, update_data: dict, token_user_id: str = Depends(verify_token)):
+    if token_user_id != user_id:
+        raise HTTPException(status_code=403, detail="Can only update your own user record")
+    # Only allow updating safe fields (e.g. company_id for onboarding link)
+    allowed = {"company_id", "full_name", "avatar_url", "preferences", "role"}
+    payload = {k: v for k, v in update_data.items() if k in allowed}
+    if not payload:
+        raise HTTPException(status_code=400, detail="No valid fields to update")
     try:
-        response = table("users").update(update_data).eq("id", user_id).execute()
+        response = table("users").update(payload).eq("id", user_id).execute()
         if not response.data:
             raise HTTPException(status_code=404, detail="User not found.")
         return {"status": "success", "data": response.data}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

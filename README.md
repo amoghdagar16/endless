@@ -1,434 +1,310 @@
-# Endless - AI-Powered Accounting Platform
+# Endless — AI-Powered Accounting Platform
 
-**Modern, full-stack accounting system with integrated AI insights and double-entry bookkeeping.**
+Full-stack accounting with double-entry bookkeeping, Supabase auth, and optional AI (OpenAI). Backend: FastAPI. Frontend: Next.js 14 (App Router) + Tailwind.
 
-This repository contains:
-- **Backend**: FastAPI + Supabase for financial data management
-- **Frontend**: Next.js 14 + Tailwind CSS with modern UX (Notion + QuickBooks style)
-- **AI Integration**: OpenAI for insights, predictions, anomaly detection, and natural language queries
-- **Smart OCR**: EasyOCR integrated into journal entries for receipt/invoice processing
-- **Double-Entry Accounting**: Complete Chart of Accounts, Journal Entries, and automated balance updates
-
-## 🎯 What's New - Complete System Redesign
-
-This is a **ground-up redesign** with professional accounting features:
-
-### Five Core Modules
-
-1. **📊 Dashboard** - Smart financial overview with graphs, KPIs, and AI summaries
-2. **📖 Journals** - Core transaction logging with built-in OCR and double-entry validation
-3. **🗂️ Chart of Accounts** - CSV upload, tree view, real-time balance updates
-4. **🤖 AI Insights** - Predictions, anomalies, recommendations + floating "Ask AI" on every page
-5. **👤 Profile** - User and company settings management 
+---
 
 ## Quick Start
 
-### Backend Setup (Satya)
+### Backend
+
 ```bash
+cd /path/to/endless
+python3 -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 cp .env.example .env
-# Edit .env with your Supabase and OpenAI credentials
-uvicorn main:app --reload
+# Edit .env: SUPABASE_URL, SUPABASE_KEY; optional: SUPABASE_JWT_SECRET, OPENAI_API_KEY
+uvicorn main:app --reload --port 8000
 ```
 
-### Frontend Setup
+API: **http://127.0.0.1:8000** · Docs: **http://127.0.0.1:8000/docs**
+
+### Frontend
+
 ```bash
 cd frontend
 npm install
 cp .env.local.example .env.local
-# Edit .env.local with Supabase credentials
+# Edit .env.local: NEXT_PUBLIC_API_BASE, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY
 npm run dev
 ```
 
-### Database Setup
+App: **http://localhost:3000**
+
+### Database
+
+**For this branch, the canonical schema is `newschema.sql`** — merged schema with COA, banking, AR/AP, reconciliation, period close, and fixed triggers. Apply in Supabase SQL Editor or via `psql`:
+
 ```bash
-# Apply new schema to Supabase
-psql $DATABASE_URL -f supabase_schema.sql
+psql $DATABASE_URL -f newschema.sql
 ```
 
-**📖 See [`MIGRATION_GUIDE.md`](MIGRATION_GUIDE.md) for complete migration instructions.**
+Then apply migrations in order:
+
+```bash
+psql $DATABASE_URL -f migrations/004_seed_coa_templates.sql
+psql $DATABASE_URL -f migrations/005_report_functions.sql
+```
+
+- **`migrations/004_seed_coa_templates.sql`** — Seeds 12 industry COA templates (SaaS, Retail, Healthcare, etc.) and shared base accounts. Idempotent; safe to re-run.
+- **`migrations/005_report_functions.sql`** — Creates PostgreSQL RPC functions used by the Reports API (`rpt_trial_balance`, `rpt_account_balances_as_of`, `rpt_account_balances_between`).
+
+Alternatively: `supabase_schema.sql` plus `migrations/002_*`, `migrations/003_*`. See **MIGRATION_GUIDE.md** for full steps.
 
 ---
 
-## ⚙️ Tech Stack
+## Tech Stack
 
-### Backend
-- **FastAPI** – Python web framework for APIs
-- **Supabase** – PostgreSQL database + authentication 
-- **Uvicorn** – ASGI web server for FastAPI
-- **python-dotenv** – Manages environment variables
-- **Supabase Python SDK** – Database queries and joins
-- **EasyOCR** – Deep learning-based OCR for text extraction
-- **Pillow** – Image processing library
-- **PyPDF** – PDF document handling
-- **OpenAI** – AI-powered expense validation and categorization
-
-### Frontend
-- **Next.js 14** – React framework with App Router
-- **TypeScript** – Type-safe JavaScript
-- **Tailwind CSS** – Utility-first CSS framework
-- **Axios** – HTTP client for API calls
-- **Recharts** – Charting library for visualizations  
+| Layer    | Tech |
+|----------|------|
+| Backend  | FastAPI, Uvicorn, python-dotenv, Supabase Python SDK, python-jose (JWT), OpenAI (optional) |
+| Frontend | Next.js 14 (App Router), TypeScript, Tailwind CSS, Supabase JS (auth), Axios, Recharts, Framer Motion, @react-pdf/renderer, Lucide icons |
+| Data     | Supabase (PostgreSQL + Auth) |
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 endless/
-├── supabase_schema.sql          # Complete database schema
-├── MIGRATION_GUIDE.md           # Migration instructions
-├── main.py                      # FastAPI app entry point
-├── database.py                  # Supabase connection
-├── smart_parser.py              # OCR text extraction logic
-├── requirements.txt             # Python dependencies
-└── /routes
-    ├── users.py                # User endpoints
-    ├── companies.py            # Company endpoints
-    ├── journals.py             # Journal entry CRUD (NEW)
-    ├── accounts.py             # Chart of Accounts CRUD (NEW)
-    ├── parser.py               # Receipt parsing
-    ├── ai_overlook.py          # AI validation
-    └── ai_insights.py          # AI insights generation (NEW)
-
-/frontend                        # Frontend (Next.js)
-├── /app                        # Next.js app router
-│   ├── layout.tsx              # Root layout with sidebar + AI
-│   ├── new-dashboard/          # Smart dashboard (NEW)
-│   ├── new-journals/           # Journal entry system (NEW)
-│   ├── chart-of-accounts/      # COA management (NEW)
-│   ├── ai-insights/            # AI insights page (NEW)
-│   ├── profile/                # User/company settings (NEW)
-│   ├── login/                  # Login page (NEW)
-│   ├── signup/                 # Signup page (NEW)
-│   └── company-setup/          # Onboarding flow (NEW)
-├── /components
-│   ├── NewSidebar.tsx          # 5-module navigation (NEW)
-│   ├── AskAIButton.tsx         # Floating AI chat (NEW)
-│   ├── KpiCard.tsx
-│   └── Table.tsx
-└── /lib
-    └── api.ts                  # API client
-```
-
-### What each file does
-
-| File | Purpose |
-|------|----------|
-| `main.py` | Runs the FastAPI server and connects all routes |
-| `database.py` | Handles connection to Supabase |
-| `smart_parser.py` | OCR text extraction and field parsing logic |
-| `requirements.txt` | Lists all Python dependencies |
-| `.env` | Stores the Supabase URL and service key |
-| `/routes/users.py` | Handles user creation, editing, and linking to companies |
-| `/routes/companies.py` | Handles company creation, editing, and linking users |
-| `/routes/expenses.py` | Handles manual expense entry with journal entries and listing |
-| `/routes/parser.py` | Handles receipt parsing (images, PDFs, CSV) |
-
----
-
-## 🚀 Setup & Run
-
-### 1️⃣ Clone the repo
-```bash
-git clone https://github.com/azythromycin/Endless-Moments-AI-Financial-Companion.git
-cd into the repo
-```
-
-### 2️⃣ Install dependencies
-```bash
-pip install -r requirements.txt
-```
-
-**Install EasyOCR (for receipt parsing):**
-```bash
-# EasyOCR dependencies
-pip install easyocr pillow pdf2image
-
-# Ubuntu/Debian - Install Poppler for PDF processing
-sudo apt-get install poppler-utils
-
-# macOS - Install Poppler
-brew install poppler
-```
-
-### 3️⃣ Add your environment variables
-Create a `.env` file in the root:
-```bash
-# Supabase Configuration
-SUPABASE_URL=https://yourproject.supabase.co
-SUPABASE_KEY=your_service_role_key
-```
-
-> ⚠️ Use the **service_role key** from Supabase — it allows full backend access (don't expose it publicly).
-
-### 4️⃣ Start the server
-```bash
-uvicorn main:app --reload
-```
-
-Your app will run at:  
-👉 **http://127.0.0.1:8000**
-
-Swagger docs:  
-👉 **http://127.0.0.1:8000/docs**
-
----
-
-## 🔗 API Overview
-
-### 🧱 Users (`/users`)
-| Method | Endpoint | Description |
-|--------|-----------|-------------|
-| GET | `/users/` | Get all users |
-| GET | `/users/{user_id}` | Get one user |
-| POST | `/users/` | Create a new user |
-| PATCH | `/users/{user_id}` | Update user details |
-| DELETE | `/users/{user_id}` | Delete a user |
-| POST | `/users/company/{company_id}` | Create a user linked to a company |
-
----
-
-### 🏢 Companies (`/companies`)
-| Method | Endpoint | Description |
-|--------|-----------|-------------|
-| GET | `/companies/` | Get all companies |
-| GET | `/companies/with-users` | Get all companies with their users |
-| GET | `/companies/{company_id}` | Get one company (with users) |
-| GET | `/companies/{company_id}/users` | Get users in a company |
-| POST | `/companies/` | Create a new company |
-| PATCH | `/companies/{company_id}` | Update company details |
-| DELETE | `/companies/{company_id}` | Delete a company |
-
----
-
-### 💰 Expenses (`/expenses`)
-| Method | Endpoint | Description |
-|--------|-----------|-------------|
-| GET | `/expenses/` | Get all expenses (bills with vendor info) |
-| GET | `/expenses/company/{company_id}` | Get expenses for a specific company |
-| POST | `/expenses/manual_entry` | Create a manual expense with automatic vendor linking, bill creation, and journal entry |
-
-**Example Request:**
-```json
-{
-  "company_id": "uuid",
-  "user_id": "uuid",
-  "vendor_name": "Office Supplies Inc",
-  "amount": 150.00,
-  "category": "Office Supplies",
-  "payment_method": "credit_card",
-  "memo": "Paper and pens",
-  "date": "2025-10-21"
-}
+├── main.py                      # FastAPI app, CORS, route includes
+├── database.py                  # Supabase client / table helpers
+├── smart_parser.py              # OCR / receipt parsing
+├── start.sh                     # Production start script (Railway: reads PORT)
+├── requirements.txt             # Dev dependencies
+├── requirements.production.txt  # Production dependencies (lighter OCR)
+├── .env.example                 # Backend env template — copy to .env
+├── newschema.sql                # Canonical merged schema (use this for this branch)
+├── supabase_schema.sql          # Legacy / alternate schema
+├── migrations/
+│   ├── 004_seed_coa_templates.sql   # 12 industry COA templates
+│   └── 005_report_functions.sql     # PostgreSQL RPC functions for reports
+├── routes/
+│   ├── journal_helpers.py       # Shared: auto-journal creation, AR/AP account lookup
+│   ├── users.py                 # /users — CRUD, link to company
+│   ├── companies.py             # /companies — CRUD, onboarding, auto COA provision
+│   ├── accounts.py              # /accounts — Chart of Accounts
+│   ├── journals.py              # /journals — Journal entries (double-entry)
+│   ├── dashboard.py             # /dashboard — Dashboard aggregates
+│   ├── ai_insights.py           # /ai-insights — AI-generated insights
+│   ├── ai_research.py           # /ai/research — Market benchmarks (Perplexity)
+│   ├── ai_overlook.py           # /ai — Expense validation (OpenAI)
+│   ├── expenses.py              # /expenses — Expense entries
+│   ├── parser.py                # /parse — Receipt/file OCR parsing
+│   ├── coa_templates.py         # /coa-templates — Industry COA templates
+│   ├── banking.py               # /bank — Banking / transactions
+│   ├── contacts.py              # /contacts — Vendors and customers
+│   ├── invoices.py              # /invoices — Invoices with auto-journal on post
+│   ├── payments.py              # /payments — Payments with auto-journal on apply
+│   ├── bills.py                 # /bills — Bills with auto-journal on post
+│   ├── bill_payments.py         # /bill-payments — Bill payments with auto-journal on apply
+│   ├── accounting_periods.py    # /accounting-periods — Period management
+│   ├── reconciliation.py        # /reconciliation — Bank reconciliation
+│   ├── reports.py               # /reports — Trial Balance, P&L, Balance Sheet, Cash Flow
+│   └── documents.py             # /documents — Document storage
+└── frontend/
+    ├── app/                     # Next.js App Router pages
+    │   ├── layout.tsx
+    │   ├── page.tsx
+    │   ├── login/               # Supabase login
+    │   ├── signup/              # Supabase signup
+    │   ├── auth/callback/       # Supabase auth callback
+    │   ├── onboarding/          # Company setup (industry → auto-provisions COA)
+    │   ├── new-dashboard/       # Main dashboard
+    │   ├── banking/             # Banking / transactions
+    │   ├── new-journals/        # Journal entries with delete support
+    │   ├── chart-of-accounts/   # Chart of Accounts
+    │   ├── invoices/            # Full invoice create/post/track UI
+    │   ├── bills/               # Full bill create/post/track UI
+    │   ├── reports/             # Financial reports with print + PDF export
+    │   ├── month-end/           # Period close / month-end
+    │   ├── ai/                  # Ask AI / market research
+    │   ├── profile/             # User + company profile
+    │   ├── company/             # Company settings
+    │   └── documents/           # Document list
+    ├── components/
+    │   ├── AppLayout.tsx        # Layout with print-safe chrome hiding
+    │   ├── ReportPDF.tsx        # PDF templates for all 4 financial reports
+    │   └── ...                  # Sidebar, shared UI
+    ├── contexts/                # AuthContext, ThemeContext
+    └── lib/                     # API client, Supabase client
 ```
 
 ---
 
-### 📄 Receipt Parser (`/parse`)
-| Method | Endpoint | Description |
-|--------|-----------|-------------|
-| POST | `/parse/` | Parse receipt image, PDF, or CSV and extract structured data |
+## Environment Variables
 
-**Extracted Fields:**
-- Vendor name
-- Transaction date
-- Total amount
-- Description
+**Backend (`.env`)** — copy from `.env.example`:
 
-**Example Usage:**
-```bash
-curl -X POST http://localhost:8000/parse/ -F "file=@receipt.png"
-```
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `SUPABASE_URL` | Yes | Supabase project URL |
+| `SUPABASE_KEY` | Yes | Service role key (backend only — never expose to frontend) |
+| `SUPABASE_JWT_SECRET` | No | JWT secret for local token validation (Project Settings → API) |
+| `OPENAI_API_KEY` | No | OpenAI for AI insights and expense validation |
+| `PERPLEXITY_API_KEY` | No | Perplexity for `/ai/research` market benchmarks |
 
----
+**Frontend (`.env.local`)** — copy from `frontend/.env.local.example`:
 
-### 🤖 AI Overlook (`/ai`)
-| Method | Endpoint | Description |
-|--------|-----------|-------------|
-| POST | `/ai/overlook_expense` | AI-powered expense validation and suggestions |
-| GET | `/status/healthz` | System health check including OpenAI status |
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anon key (safe for frontend) |
+| `NEXT_PUBLIC_API_BASE` | Yes | Backend base URL (e.g. `http://localhost:8000`) |
+| `NEXT_PUBLIC_DEMO_MODE` | No | Set to `true` to skip auth (demo) |
+| `NEXT_PUBLIC_COMPANY_ID` | No | Pre-fill company UUID for local dev |
 
-**Example Request:**
-```json
-{
-  "company_id": "uuid",
-  "vendor_name": "Office Depot",
-  "amount": 125.50,
-  "date": "2025-11-04",
-  "category": "Office Supplies",
-  "memo": "Printer paper"
-}
-```
-
-**Example Response:**
-```json
-{
-  "valid": true,
-  "issues": [],
-  "suggestions": {
-    "normalized_vendor": "Office Depot",
-    "category": "Office Supplies",
-    "memo": "Office Depot expense"
-  },
-  "json_patch": { /* same as suggestions */ }
-}
-```
-
-> **Note:** Requires `OPENAI_API_KEY` in `.env`. Falls back to rule-based suggestions if not configured.
+**Never commit `.env` or `frontend/.env.local`.** Use `.env.example` and `frontend/.env.local.example` as templates.
 
 ---
 
-## 🧩 Example
+## Frontend Modules (Current UI)
 
-### Create a new user linked to a company
-**POST** → `http://127.0.0.1:8000/users/company/d3d5e6c5-e1c2-4abc-9cce-5cbdcd0db575`
-```json
-{
-  "full_name": "Jane Doe",
-  "email": "jane@ai-finance.com",
-  "role": "accountant",
-  "user_type": "company"
-}
-```
-
-### Get a company with all its users
-**GET** → `http://127.0.0.1:8000/companies/d3d5e6c5-e1c2-4abc-9cce-5cbdcd0db575`
-
----
-
-## 💡 Notes
-
-- Backend uses the **Service Role key** — only for secure backend environments.
-- Database joins use **Supabase's PostgREST** syntax like `select("*, users(full_name, email)")`.
-- **Receipt parser** uses EasyOCR to extract text from images and PDFs with smart field parsing.
-- **Expense tracking** automatically creates vendors, bills, and journal entries for proper double-entry accounting.
-- **AI oversight** uses OpenAI for expense validation, categorization, and normalization.
-- **Frontend** provides QuickBooks/NetSuite-style interface with real-time AI suggestions.
-- API is modular and ready to scale — receipt parsing and expense automation are fully integrated!
+| Route | Purpose |
+|-------|---------|
+| `/login`, `/signup` | Supabase auth |
+| `/onboarding` | Company setup — industry selection triggers automatic COA provisioning |
+| `/new-dashboard` | Main dashboard with key metrics |
+| `/banking` | Banking / transactions |
+| `/new-journals` | Journal entries — create, view, delete; debits must equal credits |
+| `/chart-of-accounts` | Chart of Accounts viewer |
+| `/invoices` | Create invoices, map revenue accounts per line, post (triggers auto-journal) |
+| `/bills` | Create bills, map expense accounts per line, post (triggers auto-journal) |
+| `/reports` | Trial Balance, P&L, Balance Sheet, Cash Flow — with PDF export and browser print |
+| `/month-end` | Period close / month-end workflow |
+| `/ai` | Ask AI / market research (Perplexity) |
+| `/profile` | User and company profile settings |
+| `/company` | Company settings |
+| `/documents` | Document storage list |
 
 ---
 
-## 🎨 Frontend Features
+## API Overview
 
-### New System (Redesign)
+### Core
 
-#### 📊 Dashboard (`/new-dashboard`)
-- Financial health score
-- Income vs Expenses trend graphs
-- Expense breakdown pie chart
-- Recent transactions
-- AI-generated monthly summary
+| Area | Prefix | Key Endpoints |
+|------|--------|---------------|
+| Users | `/users` | CRUD, link to company |
+| Companies | `/companies` | CRUD, onboarding; auto-provisions COA on `onboarding_completed=true` |
+| Accounts | `/accounts` | Chart of Accounts CRUD |
+| Journals | `/journals` | Create / list / delete journal entries; balance validated; auto-reverses balances on delete |
+| COA Templates | `/coa-templates` | List industry templates; `GET /coa-templates/{id}/accounts` |
+| Contacts | `/contacts` | Vendors and customers |
 
-#### 📖 Journals (`/new-journals`)
-- Standardized double-entry journal form
-- Built-in OCR: Upload receipt → auto-populate journal
-- Debit/Credit auto-validation
-- Account selection from Chart of Accounts
-- Tag vendors, categories, accounts
-- Post → auto-update account balances
+### AR / AP
 
-#### 🗂️ Chart of Accounts (`/chart-of-accounts`)
-- Upload CSV for bulk import
-- Tree view with expandable accounts
-- Filter by type (Asset, Liability, Equity, Revenue, Expense)
-- Real-time balance updates from posted journals
-- Export to CSV
+| Area | Prefix | Key Behavior |
+|------|--------|--------------|
+| Invoices | `/invoices` | Create, list, update status; **posting auto-creates DR AR / CR Revenue journal entry** |
+| Payments | `/payments` | Create, apply to invoice; **applying auto-creates DR Cash / CR AR journal entry** |
+| Bills | `/bills` | Create, list, update status; **posting auto-creates DR Expense / CR AP journal entry** |
+| Bill Payments | `/bill-payments` | Create, apply to bills; **applying auto-creates DR AP / CR Cash journal entry** |
 
-#### 🤖 AI Insights (`/ai-insights`)
-- **Predictions**: Cash flow, expense trends
-- **Anomalies**: Unusual transactions
-- **Recommendations**: Cost optimization
-- **Summaries**: Monthly financial health
-- Context-aware insights
+### Reports
 
-#### 🎯 Floating "Ask AI" Button
-- Appears on EVERY page
-- Natural language queries
-- Context-aware (knows which page you're on)
-- Explains accounting concepts
-- Quick question shortcuts
+| Endpoint | Description |
+|----------|-------------|
+| `GET /reports/trial-balance?as_of_date=YYYY-MM-DD` | Per-account debit/credit totals as of date |
+| `GET /reports/profit-loss?start_date=…&end_date=…` | P&L with COGS / Operating / Other breakdown |
+| `GET /reports/balance-sheet?as_of_date=…` | Balance Sheet: Assets = Liabilities + Equity |
+| `GET /reports/cash-flow?start_date=…&end_date=…` | Cash flow from operating activities |
 
-#### 🔐 Authentication Flow
-1. **Login/Signup** → Clean auth pages
-2. **Company Setup** → Industry selection, COA import
-3. **Dashboard** → Start using the platform
+All report endpoints use PostgreSQL RPC functions (`rpt_*`) from migration 005.
 
-**Frontend runs on:** http://localhost:3000
+### Other
 
----
+| Area | Prefix | Description |
+|------|--------|-------------|
+| Dashboard | `/dashboard` | Aggregated dashboard metrics |
+| AI Insights | `/ai-insights` | AI-generated financial insights (OpenAI) |
+| AI Research | `/ai/research` | Market benchmarks (Perplexity) |
+| AI Overlook | `/ai` | Expense validation (OpenAI) |
+| Expenses | `/expenses` | Expense entries |
+| Parser | `/parse` | Receipt / file OCR parsing |
+| Banking | `/bank` | Banking data |
+| Accounting Periods | `/accounting-periods` | Period management |
+| Reconciliation | `/reconciliation` | Bank reconciliation |
+| Documents | `/documents` | Document storage |
 
-## 🗄️ Database Schema
-
-The new schema includes:
-
-- ✅ **accounts** - Chart of Accounts with hierarchy
-- ✅ **journal_entries** - Transaction headers
-- ✅ **journal_lines** - Debit/credit lines
-- ✅ **documents** - OCR-processed files
-- ✅ **contacts** - Vendors and customers
-- ✅ **ai_conversations** - Chat history
-- ✅ **ai_insights** - Generated insights
-- ✅ **audit_logs** - Activity tracking
-- ✅ Row Level Security (RLS)
-- ✅ Automatic triggers for balance updates
-
-**See:** [`supabase_schema.sql`](supabase_schema.sql) for complete schema
+Health: `GET /`, `GET /health`, `GET /status/healthz`.
 
 ---
 
-## 🚀 Key Features
+## Auto-Journal Entry System
 
-### 1. Double-Entry Accounting
-- Every transaction must balance (Debit = Credit)
-- Auto-validation before posting
-- Account balances update automatically via database triggers
+When AR/AP transactions change status, the backend **automatically creates balanced, posted journal entries** and links them back to the source document (`linked_journal_entry_id`).
 
-### 2. OCR Integration
-- Upload receipts directly in journal entry form
-- AI extracts: vendor, amount, date, tax, description
-- Suggests balanced journal entry
-- User reviews and posts
+| Trigger | Debit | Credit |
+|---------|-------|--------|
+| Invoice posted | Accounts Receivable | Revenue (per line) |
+| Payment applied to invoice | Cash / Bank (deposit account) | Accounts Receivable |
+| Bill posted | Expense (per line) | Accounts Payable |
+| Bill payment applied | Accounts Payable | Cash / Bank (payment account) |
 
-### 3. Dynamic Chart of Accounts
-- CSV upload for bulk import
-- Hierarchical account structure
-- Real-time balance updates
-- Export functionality
+**Requirements:**
+- Each invoice line must have a `revenue_account_id` before posting.
+- Each bill line must have an `expense_account_id` before posting.
+- Payments must have a `deposit_account_id`; bill payments must have a `payment_account_id`.
+- The company's COA must have accounts with subtypes `accounts_receivable` and `accounts_payable`.
 
-### 4. AI Everywhere
-- Floating "Ask AI" button on every page
-- Contextual insights
-- Anomaly detection
-- Expense predictions
-- Concept explanations
-
-### 5. Modern UX
-- Notion-inspired clean design
-- QuickBooks-style workflows
-- Responsive charts (Recharts)
-- Smart loading states
-- Contextual empty states
+The shared helper lives in `routes/journal_helpers.py` (`create_auto_journal_entry`, `get_ar_account`, `get_ap_account`).
 
 ---
 
-## 📚 Documentation
+## COA Auto-Provisioning
 
-- **[MIGRATION_GUIDE.md](MIGRATION_GUIDE.md)** - Complete migration instructions
-- **[supabase_schema.sql](supabase_schema.sql)** - Database schema
-- **API Docs** - http://localhost:8000/docs (Swagger)
+When a company completes onboarding (`onboarding_completed=true`), the backend automatically:
 
----
+1. Looks up the COA template matching the company's `industry` field.
+2. Falls back to the "Other" template if no exact match is found.
+3. Inserts all template accounts into the company's Chart of Accounts.
+4. Sets `coa_template_id` on the company record.
 
-## 👨‍💻 Contributors
+12 industry templates are available: SaaS / Software, E-commerce / Retail, Professional Services, Healthcare, Manufacturing, Food & Beverage, Real Estate, Construction, Marketing / Advertising, Education, Consulting, Other.
 
-**Endless Moments LLC**
-- Amogh Dagar
-- Satya Neriyanuru
-- Atiman Rohtagi
-- Ashish Kumar
-- Dhruv Bhatt
+Template seeding: `migrations/004_seed_coa_templates.sql` (idempotent).
 
 ---
 
-🧱 _Built with FastAPI + Supabase + Next.js 14 + OpenAI for modern, AI-powered accounting._
+## Financial Reports
+
+Reports are powered by PostgreSQL functions called via `supabase.rpc()`:
+
+| RPC Function | Used By |
+|---|---|
+| `rpt_trial_balance(company_id, as_of_date)` | Trial Balance |
+| `rpt_account_balances_as_of(company_id, as_of_date)` | Balance Sheet |
+| `rpt_account_balances_between(company_id, start_date, end_date)` | P&L, Cash Flow |
+
+The frontend (`/reports`) renders all four reports in a tabbed view with:
+- Collapsible account sections
+- Browser print support (sidebar/chrome hidden automatically via `print:hidden` CSS)
+- PDF export via `@react-pdf/renderer` (`frontend/components/ReportPDF.tsx`)
+
+---
+
+## Production
+
+- Backend: use `requirements.production.txt` and `start.sh` (reads `PORT` env variable).
+- Frontend: `npm run build` then `npm run start`.
+- Set `NEXT_PUBLIC_API_BASE` to the deployed backend URL.
+- Keep `SUPABASE_KEY` and all API keys server-side only; never expose to the frontend.
+
+See **DEPLOYMENT_GUIDE.md** / **VERCEL_DEPLOYMENT.md** if present.
+
+---
+
+## Documentation
+
+- **MIGRATION_GUIDE.md** — Database migration steps
+- **newschema.sql** — Canonical merged schema for this branch (use this)
+- **supabase_schema.sql** — Legacy full schema
+- **API docs** — http://localhost:8000/docs (when backend is running)
+
+---
+
+## Contributors
+
+Endless Moments LLC — Amogh Dagar, Satya Neriyanuru, Atiman Rohtagi, Ashish Kumar, Dhruv Bhatt.
