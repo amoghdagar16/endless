@@ -44,7 +44,7 @@ const createEmptyEntry = (): JournalEntry => ({
 })
 
 export default function NewJournals() {
-  const { company } = useAuth()
+  const { company, loading: authLoading } = useAuth()
   const companyId = company?.id || null
   const [isCreating, setIsCreating] = useState(false)
   const [journalEntry, setJournalEntry] = useState<JournalEntry>(createEmptyEntry())
@@ -57,13 +57,14 @@ export default function NewJournals() {
   const resetEntry = () => setJournalEntry(createEmptyEntry())
 
   useEffect(() => {
-    if (!companyId) {
+    if (authLoading) return
+    if (companyId) {
+      fetchAccounts(companyId)
+      fetchRecentJournals(companyId)
+    } else {
       setLoading(false)
-      return
     }
-    fetchAccounts(companyId)
-    fetchRecentJournals(companyId)
-  }, [companyId])
+  }, [companyId, authLoading])
 
   useEffect(() => {
     if (!toast) return
@@ -294,7 +295,7 @@ export default function NewJournals() {
   const { totalDebit, totalCredit } = calculateTotals()
   const balanced = isBalanced()
 
-  if (!companyId) {
+  if (authLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 text-center">
         <FileText className="w-16 h-16 text-gray-400 dark:text-white/30 mb-4" />
@@ -307,6 +308,22 @@ export default function NewJournals() {
           className="px-4 py-2 rounded-full bg-gradient-to-r from-fuchsia-500 to-indigo-500 text-sm font-semibold text-white"
         >
           Complete onboarding
+        </a>
+      </div>
+    )
+  }
+
+  if (!companyId) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-8 bg-gray-50 dark:bg-slate-950">
+        <p className="text-gray-600 dark:text-white/70 text-center max-w-md">
+          No company linked to your account. Complete onboarding to create journal entries.
+        </p>
+        <a
+          href="/onboarding"
+          className="px-4 py-2 rounded-full bg-fuchsia-500 text-white text-sm font-medium hover:bg-fuchsia-600 transition-colors"
+        >
+          Go to onboarding
         </a>
       </div>
     )

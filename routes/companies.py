@@ -5,6 +5,19 @@ from middleware.auth import get_current_user_company, require_role, verify_token
 
 router = APIRouter(prefix="/companies", tags=["Companies"])
 
+# Only pass these keys to DB (avoids "column does not exist" from frontend payload)
+_COMPANY_KEYS = {
+    "name", "industry", "email", "phone", "address", "city", "state", "zip_code", "country",
+    "currency", "fiscal_year_end", "tax_id", "logo_url", "settings", "onboarding_completed",
+    "business_type", "employee_count", "annual_revenue", "founded_year",
+    "location_city", "location_state", "location_country", "location_zip",
+    "primary_products", "target_market", "competitors", "growth_stage", "onboarding_step", "website",
+}
+
+
+def _company_payload(payload: dict) -> dict:
+    return {k: v for k, v in payload.items() if k in _COMPANY_KEYS}
+
 
 # Get all companies (with users included)
 @router.get("/with-users")
@@ -63,12 +76,44 @@ def get_company(company_id: str, auth: Dict[str, str] = Depends(get_current_user
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# Create a new company
+# Create a new company (requires auth, auto-links user)
 @router.post("/")
-def create_company(company: dict):
+async def create_company(company: dict, user_id: str = Depends(verify_token)):
     try:
-        response = table("companies").insert(company).execute()
+        # Look up user row (may not exist if signup POST failed)
+        user_resp = supabase.table("users").select("company_id").eq("id", user_id).execute()
+        user_row = user_resp.data[0] if user_resp.data else None
+        existing_company_id = user_row.get("company_id") if user_row else None
+
+        payload = _company_payload(company)
+        if not payload.get("name"):
+            raise HTTPException(status_code=400, detail="Company name is required")
+
+        if existing_company_id:
+            response = table("companies").update(payload).eq("id", existing_company_id).execute()
+            if not response.data:
+                raise HTTPException(status_code=404, detail="Existing company not found, try again")
+        else:
+            response = table("companies").insert(payload).execute()
+            if not response.data:
+                raise HTTPException(status_code=500, detail="Company creation failed")
+            new_id = response.data[0]["id"]
+            # Auto-link: update or create user row
+            if user_row:
+                supabase.table("users").update({"company_id": new_id}).eq("id", user_id).execute()
+            else:
+                # User row missing — create it now so auth context can find it
+                supabase.table("users").insert({
+                    "id": user_id,
+                    "company_id": new_id,
+                    "email": "",
+                    "full_name": "User",
+                    "role": "admin"
+                }).execute()
+
         return {"status": "success", "data": response.data}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -109,8 +154,8 @@ async def update_company(
         if user_company_id and user_company_id != company_id and not company_still_in_onboarding:
             raise HTTPException(status_code=403, detail="Cannot update another company")
 
-        # Update the company
-        response = table("companies").update(update_data).eq("id", company_id).execute()
+        payload = _company_payload(update_data)
+        response = table("companies").update(payload).eq("id", company_id).execute()
         if not response.data:
             raise HTTPException(status_code=404, detail="Company not found.")
 

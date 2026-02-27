@@ -9,10 +9,12 @@ env/
 ENV/
 .venv
 
-# Environment variables & secrets (never commit these)
+# Environment variables and secrets (never commit real keys)
 .env
 .env.local
 .env.secrets
+.env.*.local
+frontend/.env.local
 *.secrets
 
 # IDE

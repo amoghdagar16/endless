@@ -27,68 +27,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
 
   const fetchUserData = async (authUser: SupabaseUser) => {
-    if (!supabase) return
     try {
-      // Try Supabase direct read first; fall back to backend API if RLS blocks it
-      let userData: any = null
+      // Fetch user via backend API (bypasses broken RLS on users table)
+      let userResp = await api.get(`/users/${authUser.id}`)
+      let userData = userResp?.data
 
-      const { data: directData, error: userError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', authUser.id)
-        .maybeSingle()
-
-      if (!userError && directData) {
-        userData = directData
-      } else {
-        // RLS may block direct read — use backend API (public endpoint, no auth needed)
-        try {
-          const res = await fetch(
-            `${process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000'}/users/${authUser.id}`
-          )
-          if (res.ok) {
-            const json = await res.json()
-            if (json?.data) userData = json.data
-          }
-        } catch {
-          // Backend not reachable
-        }
-      }
-
+      // If user row doesn't exist, create it via backend
       if (!userData) {
-        setUser(null)
-        setCompany(null)
-        return
+        const fullName = authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'User'
+        await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/users/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: authUser.id,
+            email: authUser.email,
+            full_name: fullName,
+            role: 'admin',
+          }),
+        })
+        userResp = await api.get(`/users/${authUser.id}`)
+        userData = userResp?.data
       }
+
+      if (!userData) return
 
       setUser(userData)
 
-      // Fetch company: try Supabase first; fall back to backend API
+      // Fetch company via backend API
       if (userData.company_id) {
-        let companyData: any = null
-
-        const { data: directCompany, error: companyError } = await supabase
-          .from('companies')
-          .select('*')
-          .eq('id', userData.company_id)
-          .maybeSingle()
-
-        if (!companyError && directCompany) {
-          companyData = directCompany
-        } else {
-          try {
-            const res = await api.get<{ data?: any[] }>('/companies/')
-            if (res?.data && res.data.length > 0) {
-              companyData = res.data[0]
-            }
-          } catch {
-            // Backend not reachable
-          }
+        try {
+          const companyResp = await api.get('/companies/')
+          const companyData = companyResp?.data?.[0]
+          if (companyData) setCompany(companyData)
+        } catch {
+          console.error('Failed to load company data')
         }
-
-        setCompany(companyData)
-      } else {
-        setCompany(null)
       }
     } catch (error) {
       console.error('Error fetching user data:', error)
@@ -102,10 +75,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return
     }
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSupabaseUser(session?.user ?? null)
       if (session?.user) {
-        fetchUserData(session.user)
+        await fetchUserData(session.user)
       }
       setLoading(false)
     })
@@ -115,12 +88,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSupabaseUser(session?.user ?? null)
       if (session?.user) {
-        fetchUserData(session.user)
+        fetchUserData(session.user).finally(() => setLoading(false))
       } else {
         setUser(null)
         setCompany(null)
+        setLoading(false)
       }
-      setLoading(false)
     })
 
     return () => subscription.unsubscribe()
@@ -217,19 +190,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         await fetchUserData(data.user)
 
-        // Check if user has completed onboarding (maybeSingle: user/company row may not exist yet)
-        const { data: userData } = await supabase
-          .from('users')
-          .select('company_id, companies(onboarding_completed)')
-          .eq('id', data.user.id)
-          .maybeSingle()
+        // Check onboarding status via backend API (bypasses RLS)
+        try {
+          const companyResp = await api.get('/companies/')
+          const companyData = companyResp?.data?.[0]
 
-        if (!userData?.company_id) {
+          if (!companyData) {
+            router.push('/onboarding')
+          } else if (!companyData.onboarding_completed) {
+            router.push('/onboarding')
+          } else {
+            router.push('/new-dashboard')
+          }
+        } catch {
           router.push('/onboarding')
-        } else if (!(userData.companies as any)?.onboarding_completed) {
-          router.push('/onboarding')
-        } else {
-          router.push('/new-dashboard')
         }
       }
     } catch (error: any) {

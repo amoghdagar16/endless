@@ -203,15 +203,24 @@ export default function NewDashboard() {
     ]
   }, [stats])
 
-  if (!companyId) {
+  if (!companyId && !authLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'var(--neon-fuchsia)' }} />
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-8">
+        <p className="text-center max-w-md" style={{ color: 'var(--text-muted)' }}>
+          No company linked to your account. Complete onboarding to see your dashboard.
+        </p>
+        <a
+          href="/onboarding"
+          className="px-4 py-2 rounded-full font-medium transition-colors"
+          style={{ backgroundColor: 'var(--neon-fuchsia)', color: 'white' }}
+        >
+          Go to onboarding
+        </a>
       </div>
     )
   }
 
-  if (loading) {
+  if (!companyId || loading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'var(--neon-fuchsia)' }} />

@@ -39,7 +39,7 @@ const navigation = [
   { name: 'Month-end', href: '/month-end', icon: CalendarCheck },
   { name: 'Profile', href: '/profile', icon: User },
   { name: 'Ask AI', href: '/ai', icon: Sparkles },
-  { name: 'Company', href: '/company', icon: Globe }
+  { name: 'Company', href: '/profile?tab=company', icon: Globe }
 ]
 
 export default function NewSidebar({ collapsed, onToggle }: SidebarProps) {

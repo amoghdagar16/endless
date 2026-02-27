@@ -27,7 +27,7 @@ interface Account {
 }
 
 export default function ChartOfAccounts() {
-  const { company } = useAuth()
+  const { company, loading: authLoading } = useAuth()
   const companyId = company?.id || null
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loading, setLoading] = useState(true)
@@ -36,10 +36,13 @@ export default function ChartOfAccounts() {
   const [totalsByType, setTotalsByType] = useState<Record<string, number>>({})
 
   useEffect(() => {
+    if (authLoading) return
     if (companyId) {
       fetchAccounts(companyId)
+    } else {
+      setLoading(false)
     }
-  }, [companyId])
+  }, [companyId, authLoading])
 
   const buildAccountHierarchy = (flatAccounts: Account[]): Account[] => {
     const accountMap = new Map<string, Account>()
@@ -164,10 +167,26 @@ export default function ChartOfAccounts() {
     ? accounts
     : accounts.filter(a => a.type === filter)
 
-  if (!companyId) {
+  if (authLoading) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-slate-950">
         <Loader2 className="w-8 h-8 text-fuchsia-500 dark:text-fuchsia-300 animate-spin" />
+      </div>
+    )
+  }
+
+  if (!companyId) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-8 bg-gray-50 dark:bg-slate-950">
+        <p className="text-gray-600 dark:text-white/70 text-center max-w-md">
+          No company linked to your account. Complete onboarding so we can load your chart of accounts.
+        </p>
+        <a
+          href="/onboarding"
+          className="px-4 py-2 rounded-full bg-fuchsia-500 text-white text-sm font-medium hover:bg-fuchsia-600 transition-colors"
+        >
+          Go to onboarding
+        </a>
       </div>
     )
   }
