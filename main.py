@@ -31,6 +31,10 @@ from routes import (
 app = FastAPI(title="AI Financial Companion Backend")
 
 # CORS middleware for frontend
+import os as _os
+
+_extra_origins = [o.strip() for o in _os.getenv("ALLOWED_ORIGINS", "").split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -40,9 +44,7 @@ app.add_middleware(
         "http://127.0.0.1:3000",
         "http://127.0.0.1:3001",
         "http://127.0.0.1:3002",
-        "https://*.vercel.app",  # Allow all Vercel deployments
-        "https://endless-accounting.vercel.app",  # Your production URL
-    ],
+    ] + _extra_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
