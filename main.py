@@ -44,6 +44,8 @@ app.add_middleware(
         "http://127.0.0.1:3000",
         "http://127.0.0.1:3001",
         "http://127.0.0.1:3002",
+        "https://endlessfinance.vercel.app",
+        "https://endless-a1l924daz-amogh-pennys-projects.vercel.app",
     ] + _extra_origins,
     allow_credentials=True,
     allow_methods=["*"],
