@@ -1,0 +1,1028 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── PWA / Mobile safe area ── */
+:root {
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Prevent overscroll bounce on iOS */
+html, body {
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Better touch targets on mobile */
+@media (max-width: 767px) {
+  button, a {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Ensure tables scroll horizontally on small screens */
+  table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* ─────────────────────────────────────────────
+   FINTRA DESIGN SYSTEM — 2026
+   Light: Supabase precision (warm white, crisp borders, depth)
+   Dark:  Vercel character (not just black — layered zinc with blue tint)
+   Accent: #3ecf8e Supabase-green for highlights, #2563eb for actions
+───────────────────────────────────────────── */
+
+/* ── Font imports ── */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
+
+/* ── Neon data-viz palette (charts/badges only) ── */
+:root {
+  --neon-emerald:  #3ecf8e;
+  --neon-fuchsia:  #d946ef;
+  --neon-cyan:     #06b6d4;
+  --neon-indigo:   #818cf8;
+  --neon-purple:   #a855f7;
+  --neon-amber:    #f59e0b;
+  --neon-red:      #f43f5e;
+}
+
+/* ─────────────────────────────────────────────
+   LIGHT MODE — Supabase-inspired
+   Warm off-white canvas, crisp #e2e8f0 borders,
+   #0f172a text, layered card surfaces
+───────────────────────────────────────────── */
+:root,
+html.light,
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* Surfaces — layered like Supabase */
+  --bg-primary:    #f8fafc;   /* warm off-white canvas */
+  --bg-secondary:  #ffffff;   /* sidebar / panels */
+  --bg-tertiary:   #f1f5f9;   /* inset areas, code blocks */
+  --bg-card:       #ffffff;   /* cards always white */
+  --bg-muted:      #f1f5f9;   /* hover bg, muted areas */
+  --bg-hover:      #e9eef4;   /* hover state */
+  --bg-input:      #ffffff;   /* inputs */
+  --bg-overlay:    rgba(15,23,42,0.5);
+
+  /* Text — dark slate, not pure black */
+  --text-primary:   #0f172a;
+  --text-secondary: #475569;
+  --text-muted:     #94a3b8;
+  --text-disabled:  #cbd5e1;
+  --text-inverse:   #ffffff;
+
+  /* Borders — Supabase uses crisp visible borders */
+  --border-color:   #e2e8f0;
+  --border-strong:  #cbd5e1;
+  --border-focus:   #2563eb;
+
+  /* Accent — electric blue (QuickBooks/Copilot energy) */
+  --accent:         #2563eb;
+  --accent-hover:   #1d4ed8;
+  --accent-subtle:  #eff6ff;
+  --accent-text:    #1e40af;
+
+  /* Success green (Supabase-inspired) */
+  --success:        #3ecf8e;
+  --success-subtle: #dcfce7;
+
+  /* Grid dots — crisp and visible in light */
+  --dot-color:      rgba(15,23,42,0.10);
+  --dot-size:       24px;
+
+  /* Shadows — layered like Supabase */
+  --shadow-xs:  0 1px 2px rgba(15,23,42,0.04);
+  --shadow-sm:  0 1px 3px rgba(15,23,42,0.06), 0 1px 2px rgba(15,23,42,0.04);
+  --shadow-md:  0 4px 6px rgba(15,23,42,0.05), 0 2px 4px rgba(15,23,42,0.06);
+  --shadow-lg:  0 10px 15px rgba(15,23,42,0.05), 0 4px 6px rgba(15,23,42,0.04);
+  --shadow-xl:  0 20px 25px rgba(15,23,42,0.08), 0 8px 10px rgba(15,23,42,0.04);
+
+  --glow-opacity: 0;
+
+  /* Sidebar specifics */
+  --sidebar-bg:     #f8fafc;
+  --sidebar-border: #e2e8f0;
+}
+
+/* ─────────────────────────────────────────────
+   DARK MODE — Vercel/Linear character
+   NOT just black — layered zinc with blue undertone,
+   visible grid, proper depth
+───────────────────────────────────────────── */
+html.dark,
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Surfaces — layered, NOT flat black */
+  --bg-primary:    #09090c;   /* near-black blue canvas */
+  --bg-secondary:  #111117;   /* sidebar, panels — noticeably lighter */
+  --bg-tertiary:   #18181f;   /* inset, nested areas */
+  --bg-card:       #141419;   /* cards — sits above canvas */
+  --bg-muted:      #1d1d26;   /* muted areas, hover targets */
+  --bg-hover:      #22222e;   /* hover state — visible lift */
+  --bg-input:      #111117;   /* inputs */
+  --bg-overlay:    rgba(0,0,8,0.7);
+
+  /* Text */
+  --text-primary:   #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted:     #475569;
+  --text-disabled:  #334155;
+  --text-inverse:   #0f172a;
+
+  /* Borders — visible, not invisible */
+  --border-color:   rgba(148,163,184,0.12);
+  --border-strong:  rgba(148,163,184,0.2);
+  --border-focus:   #3b82f6;
+
+  /* Accent */
+  --accent:         #3b82f6;
+  --accent-hover:   #2563eb;
+  --accent-subtle:  rgba(59,130,246,0.1);
+  --accent-text:    #93c5fd;
+
+  /* Success */
+  --success:        #3ecf8e;
+  --success-subtle: rgba(62,207,142,0.1);
+
+  /* Grid dots — crisp blue-tinted in dark */
+  --dot-color:      rgba(148,163,184,0.10);
+  --dot-size:       24px;
+
+  /* Shadows */
+  --shadow-xs:  0 1px 2px rgba(0,0,0,0.4);
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.3);
+  --shadow-md:  0 4px 6px rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.3);
+  --shadow-lg:  0 10px 15px rgba(0,0,0,0.5), 0 4px 6px rgba(0,0,0,0.3);
+  --shadow-xl:  0 20px 25px rgba(0,0,0,0.6), 0 8px 10px rgba(0,0,0,0.4);
+
+  --glow-opacity: 0.18;
+
+  /* Sidebar */
+  --sidebar-bg:     #0f0f15;
+  --sidebar-border: rgba(148,163,184,0.12);
+
+  /* Borders — more visible in dark for depth */
+  --border-color:   rgba(148,163,184,0.14);
+  --border-strong:  rgba(148,163,184,0.22);
+}
+
+/* ─────────────────────────────────────────────
+   BASE RESET
+───────────────────────────────────────────── */
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html, body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'DM Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    line-height: 1.6;
+    letter-spacing: -0.005em;
+  }
+
+  h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.035em; line-height: 1.15; }
+  h2 { font-size: 22px; font-weight: 600; letter-spacing: -0.025em; line-height: 1.25; }
+  h3 { font-size: 18px; font-weight: 600; letter-spacing: -0.02em;  line-height: 1.3; }
+  h4 { font-size: 15px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.4; }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--text-primary);
+  }
+
+  a {
+    color: var(--accent);
+    text-decoration: none;
+    transition: opacity 0.15s;
+  }
+
+  a:hover { opacity: 0.8; }
+
+  ::selection {
+    background: var(--accent-subtle);
+    color: var(--accent-text);
+  }
+}
+
+/* ─────────────────────────────────────────────
+   COMPONENTS
+───────────────────────────────────────────── */
+@layer components {
+
+  /* ── Dot/grid background — proper fine grid ── */
+  .dot-grid {
+    background-image:
+      radial-gradient(circle, var(--dot-color) 1px, transparent 1px);
+    background-size: var(--dot-size) var(--dot-size);
+    background-position: 0 0;
+  }
+
+  /* Supabase-style subtle line grid (alternative, used on some sections) */
+  .line-grid {
+    background-image:
+      linear-gradient(var(--dot-color) 1px, transparent 1px),
+      linear-gradient(90deg, var(--dot-color) 1px, transparent 1px);
+    background-size: var(--dot-size) var(--dot-size);
+  }
+
+  /* ─────────────────────────────────────────────
+     CARDS — Supabase precision
+  ───────────────────────────────────────────── */
+
+  .card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+  }
+
+  .card:hover {
+    box-shadow: var(--shadow-md);
+    border-color: var(--border-strong);
+  }
+
+  .card-flat {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+  }
+
+  /* Supabase-style section panel — white bg with border */
+  .panel {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  /* Panel header — slightly tinted, with bottom border */
+  .panel-header {
+    background-color: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-color);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  /* Panel footer */
+  .panel-footer {
+    background-color: var(--bg-tertiary);
+    border-top: 1px solid var(--border-color);
+    padding: 12px 16px;
+  }
+
+  /* Legacy glow card — kept for chart widgets only */
+  .card-glow {
+    position: relative;
+    overflow: hidden;
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+  }
+
+  .card-glow::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% -20%, var(--neon-emerald), transparent 65%);
+    opacity: calc(var(--glow-opacity) * 0.4);
+    pointer-events: none;
+  }
+
+  /* ── KPI metric card ── */
+  .kpi {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    box-shadow: var(--shadow-sm);
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    transition: box-shadow 0.15s ease, transform 0.12s ease, border-color 0.15s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .kpi:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+    border-color: var(--border-strong);
+  }
+
+  /* Top accent bar on KPI */
+  .kpi::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .kpi:hover::after {
+    opacity: 0.6;
+  }
+
+  /* ── Surfaces ── */
+  .surface {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+  }
+
+  .surface-elevated {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-md);
+  }
+
+  /* ─────────────────────────────────────────────
+     BUTTON SYSTEM — Complete, surgical
+  ───────────────────────────────────────────── */
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 34px;
+    padding: 0 13px;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: 'DM Sans', sans-serif;
+    letter-spacing: -0.01em;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-card);
+    color: var(--text-primary);
+    cursor: pointer;
+    white-space: nowrap;
+    transition:
+      background-color 0.1s ease,
+      border-color 0.1s ease,
+      box-shadow 0.1s ease,
+      color 0.1s ease,
+      transform 0.08s ease,
+      opacity 0.1s ease;
+    outline: none;
+    text-decoration: none;
+    -webkit-user-select: none;
+    user-select: none;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn:hover {
+    background-color: var(--bg-hover);
+    border-color: var(--border-strong);
+  }
+
+  .btn:active { transform: scale(0.97); opacity: 0.9; }
+
+  .btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .btn:disabled,
+  .btn[disabled] {
+    opacity: 0.45;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  /* Primary — accent blue, Supabase-style slight gradient */
+  .btn-primary {
+    background: linear-gradient(180deg, var(--accent) 0%, var(--accent-hover) 100%);
+    border-color: var(--accent-hover);
+    color: #ffffff;
+    box-shadow: 0 1px 2px rgba(37,99,235,0.2), inset 0 1px 0 rgba(255,255,255,0.1);
+  }
+
+  .btn-primary:hover {
+    background: linear-gradient(180deg, #3b82f6 0%, var(--accent) 100%);
+    border-color: var(--accent);
+    box-shadow: 0 2px 6px rgba(37,99,235,0.3), inset 0 1px 0 rgba(255,255,255,0.12);
+  }
+
+  /* Secondary — outlined, Supabase style */
+  .btn-secondary {
+    background-color: var(--bg-card);
+    border-color: var(--border-strong);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-xs);
+  }
+
+  .btn-secondary:hover {
+    background-color: var(--bg-muted);
+    border-color: var(--border-strong);
+  }
+
+  /* Ghost */
+  .btn-ghost {
+    background-color: transparent;
+    border-color: transparent;
+    color: var(--text-secondary);
+    box-shadow: none;
+  }
+
+  .btn-ghost:hover {
+    background-color: var(--bg-muted);
+    border-color: transparent;
+    color: var(--text-primary);
+  }
+
+  /* Success */
+  .btn-success {
+    background: linear-gradient(180deg, #10b981 0%, #059669 100%);
+    border-color: #059669;
+    color: #ffffff;
+    box-shadow: 0 1px 2px rgba(16,185,129,0.2);
+  }
+
+  .btn-success:hover {
+    background: linear-gradient(180deg, #34d399 0%, #10b981 100%);
+    box-shadow: 0 2px 6px rgba(16,185,129,0.3);
+  }
+
+  /* Danger */
+  .btn-danger {
+    background: linear-gradient(180deg, #ef4444 0%, #dc2626 100%);
+    border-color: #dc2626;
+    color: #ffffff;
+    box-shadow: 0 1px 2px rgba(220,38,38,0.2);
+  }
+
+  .btn-danger:hover {
+    background: linear-gradient(180deg, #f87171 0%, #ef4444 100%);
+    box-shadow: 0 2px 6px rgba(220,38,38,0.3);
+  }
+
+  /* Accent subtle — tinted bg, like Supabase's "default" buttons */
+  .btn-accent {
+    background-color: var(--accent-subtle);
+    border-color: rgba(37,99,235,0.2);
+    color: var(--accent);
+    box-shadow: none;
+  }
+
+  .btn-accent:hover {
+    background-color: #dbeafe;
+    border-color: var(--accent);
+  }
+
+  /* Neon — kept for AI/special CTAs ONLY */
+  .btn-neon {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    border-color: #6366f1;
+    color: #ffffff;
+    box-shadow: 0 0 12px rgba(99,102,241,0.3);
+  }
+
+  .btn-neon:hover {
+    box-shadow: 0 0 20px rgba(99,102,241,0.4);
+    transform: translateY(-1px) scale(1.01);
+  }
+
+  /* Size variants */
+  .btn-xs  { height: 24px; padding: 0 8px;  font-size: 11px; border-radius: 5px; gap: 4px; }
+  .btn-sm  { height: 29px; padding: 0 10px; font-size: 12px; border-radius: 6px; }
+  .btn-lg  { height: 40px; padding: 0 18px; font-size: 14px; border-radius: 8px; font-weight: 500; }
+  .btn-xl  { height: 48px; padding: 0 24px; font-size: 15px; border-radius: 10px; font-weight: 600; }
+
+  .btn-icon     { width: 34px; height: 34px; padding: 0; border-radius: 7px; }
+  .btn-icon.btn-sm { width: 29px; height: 29px; border-radius: 6px; }
+  .btn-icon.btn-lg { width: 40px; height: 40px; border-radius: 8px; }
+
+  /* Full width utility */
+  .btn-block { width: 100%; }
+
+  /* ─────────────────────────────────────────────
+     INPUT SYSTEM — Supabase quality
+  ───────────────────────────────────────────── */
+
+  .input {
+    width: 100%;
+    height: 34px;
+    padding: 0 11px;
+    border-radius: 7px;
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 400;
+    letter-spacing: -0.005em;
+    background-color: var(--bg-input);
+    border: 1px solid var(--border-strong);
+    color: var(--text-primary);
+    outline: none;
+    transition: border-color 0.1s ease, box-shadow 0.1s ease;
+    -webkit-appearance: none;
+    appearance: none;
+    box-shadow: var(--shadow-xs);
+  }
+
+  .input::placeholder { color: var(--text-muted); }
+  .input:hover { border-color: var(--border-strong); }
+
+  .input:focus {
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+  }
+
+  .input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: var(--bg-muted);
+  }
+
+  .input-lg { height: 40px; padding: 0 13px; font-size: 14px; border-radius: 8px; }
+  .input-sm { height: 29px; padding: 0 9px;  font-size: 12px; border-radius: 6px; }
+
+  .input-error {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 3px rgba(239,68,68,0.1);
+  }
+
+  .label {
+    display: block;
+    font-size: 12.5px;
+    font-weight: 500;
+    margin-bottom: 5px;
+    color: var(--text-secondary);
+    letter-spacing: -0.005em;
+  }
+
+  .textarea {
+    width: 100%;
+    padding: 9px 11px;
+    border-radius: 7px;
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    background-color: var(--bg-input);
+    border: 1px solid var(--border-strong);
+    color: var(--text-primary);
+    outline: none;
+    resize: vertical;
+    min-height: 80px;
+    transition: border-color 0.1s ease, box-shadow 0.1s ease;
+    box-shadow: var(--shadow-xs);
+  }
+
+  .textarea:focus {
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+  }
+
+  .select {
+    width: 100%;
+    height: 34px;
+    padding: 0 30px 0 11px;
+    border-radius: 7px;
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    background-color: var(--bg-input);
+    border: 1px solid var(--border-strong);
+    color: var(--text-primary);
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 9px center;
+    box-shadow: var(--shadow-xs);
+    transition: border-color 0.1s ease;
+  }
+
+  .select:focus {
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+  }
+
+  /* ─────────────────────────────────────────────
+     STATUS BADGES — Supabase-style
+  ───────────────────────────────────────────── */
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 20px;
+    padding: 0 7px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    border: 1px solid transparent;
+  }
+
+  /* Light mode badges */
+  .badge-success { background: #dcfce7; color: #15803d; border-color: #bbf7d0; }
+  .badge-warning { background: #fef9c3; color: #854d0e; border-color: #fde68a; }
+  .badge-danger  { background: #fee2e2; color: #dc2626; border-color: #fecaca; }
+  .badge-info    { background: #dbeafe; color: #1d4ed8; border-color: #bfdbfe; }
+  .badge-neutral { background: var(--bg-muted); color: var(--text-secondary); border-color: var(--border-color); }
+  .badge-purple  { background: #f3e8ff; color: #7c3aed; border-color: #e9d5ff; }
+  .badge-green   { background: #d1fae5; color: #065f46; border-color: #a7f3d0; }
+
+  /* Dark mode badge overrides */
+  html.dark .badge-success, [data-theme="dark"] .badge-success {
+    background: rgba(62,207,142,0.1); color: #3ecf8e; border-color: rgba(62,207,142,0.2);
+  }
+  html.dark .badge-warning, [data-theme="dark"] .badge-warning {
+    background: rgba(245,158,11,0.1); color: #fbbf24; border-color: rgba(245,158,11,0.2);
+  }
+  html.dark .badge-danger, [data-theme="dark"] .badge-danger {
+    background: rgba(244,63,94,0.1); color: #fb7185; border-color: rgba(244,63,94,0.2);
+  }
+  html.dark .badge-info, [data-theme="dark"] .badge-info {
+    background: rgba(59,130,246,0.1); color: #93c5fd; border-color: rgba(59,130,246,0.2);
+  }
+  html.dark .badge-purple, [data-theme="dark"] .badge-purple {
+    background: rgba(139,92,246,0.1); color: #c4b5fd; border-color: rgba(139,92,246,0.2);
+  }
+
+  /* ─────────────────────────────────────────────
+     TABLE SYSTEM — Supabase-quality
+  ───────────────────────────────────────────── */
+
+  .table {
+    width: 100%;
+    font-size: 13px;
+    border-collapse: collapse;
+    letter-spacing: -0.005em;
+  }
+
+  .table thead {
+    background-color: var(--bg-tertiary);
+  }
+
+  .table thead th {
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 9px 16px;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+    background-color: var(--bg-tertiary);
+  }
+
+  .table tbody tr {
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.08s ease;
+  }
+
+  .table tbody tr:last-child { border-bottom: none; }
+
+  .table tbody tr:hover { background-color: var(--bg-muted); }
+
+  .table tbody td {
+    padding: 10px 16px;
+    color: var(--text-primary);
+    vertical-align: middle;
+  }
+
+  /* Table container with border */
+  .table-container {
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--bg-card);
+  }
+
+  /* ─────────────────────────────────────────────
+     SKELETON LOADERS — proper shimmer
+  ───────────────────────────────────────────── */
+
+  @keyframes skeleton-shimmer {
+    0%   { background-position: -600px 0; }
+    100% { background-position: 600px 0; }
+  }
+
+  .skeleton {
+    border-radius: 5px;
+    background: linear-gradient(
+      90deg,
+      var(--bg-muted) 0%,
+      var(--bg-hover) 45%,
+      var(--bg-muted) 90%
+    );
+    background-size: 1200px 100%;
+    animation: skeleton-shimmer 1.6s infinite linear;
+  }
+
+  .skeleton-text    { height: 13px; border-radius: 3px; }
+  .skeleton-heading { height: 20px; border-radius: 4px; }
+  .skeleton-avatar  { border-radius: 50%; }
+  .skeleton-btn     { height: 34px; border-radius: 7px; }
+  .skeleton-card    { height: 100px; border-radius: 10px; }
+
+  /* ─────────────────────────────────────────────
+     NAV ITEMS — Supabase sidebar style
+  ───────────────────────────────────────────── */
+
+  .nav-item {
+    color: var(--text-secondary);
+    border-left: 2px solid transparent;
+    border-radius: 0 7px 7px 0;
+    transition: background-color 0.08s ease, color 0.08s ease, border-color 0.08s ease;
+  }
+
+  .nav-item:hover {
+    background-color: var(--bg-muted);
+    color: var(--text-primary);
+  }
+
+  .nav-item-active {
+    background-color: var(--accent-subtle);
+    color: var(--accent);
+    border-left: 2px solid var(--accent);
+    font-weight: 500;
+  }
+
+  /* ─────────────────────────────────────────────
+     EMPTY STATE
+  ───────────────────────────────────────────── */
+
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 60px 32px;
+    gap: 10px;
+  }
+
+  .empty-state-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 11px;
+    background-color: var(--bg-muted);
+    border: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+
+  .empty-state-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+  }
+
+  .empty-state-desc {
+    font-size: 13px;
+    color: var(--text-muted);
+    max-width: 300px;
+    line-height: 1.55;
+  }
+
+  /* ─────────────────────────────────────────────
+     DIVIDERS + SECTIONS
+  ───────────────────────────────────────────── */
+
+  .divider {
+    height: 1px;
+    background-color: var(--border-color);
+    margin: 0;
+  }
+
+  /* Section label — Supabase uses these above panels */
+  .section-label {
+    font-size: 10.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+
+  /* ─────────────────────────────────────────────
+     SCROLLBAR
+  ───────────────────────────────────────────── */
+
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+  /* ─────────────────────────────────────────────
+     NEON TEXT HELPERS (data viz only)
+  ───────────────────────────────────────────── */
+
+  .text-neon-emerald { color: var(--neon-emerald); }
+  .text-neon-fuchsia { color: var(--neon-fuchsia); }
+  .text-neon-cyan    { color: var(--neon-cyan); }
+  .text-neon-indigo  { color: var(--neon-indigo); }
+  .text-neon-purple  { color: var(--neon-purple); }
+  .text-neon-amber   { color: var(--neon-amber); }
+  .text-neon-red     { color: var(--neon-red); }
+
+  .text-gradient-neon {
+    background: linear-gradient(135deg, var(--neon-fuchsia), var(--neon-cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .text-accent   { color: var(--accent); }
+  .text-success  { color: var(--success); }
+  .text-danger   { color: var(--neon-red); }
+
+  /* ─────────────────────────────────────────────
+     HERO ANIMATIONS (landing page)
+  ───────────────────────────────────────────── */
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  @keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-12px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  @keyframes shimmerMove {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(200%); }
+  }
+
+  @keyframes floatY {
+    0%, 100% { transform: translateY(0px); }
+    50%       { transform: translateY(-6px); }
+  }
+
+  @keyframes pulseRing {
+    0%   { box-shadow: 0 0 0 0 rgba(37,99,235,0.3); }
+    70%  { box-shadow: 0 0 0 8px rgba(37,99,235,0); }
+    100% { box-shadow: 0 0 0 0 rgba(37,99,235,0); }
+  }
+
+  @keyframes gradientShift {
+    0%   { background-position: 0% 50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  @keyframes skeleton-shimmer {
+    0%   { background-position: -600px 0; }
+    100% { background-position: 600px 0; }
+  }
+
+  .animate-fade-up   { animation: fadeUp 0.5s ease forwards; }
+  .animate-fade-in   { animation: fadeIn 0.4s ease forwards; }
+  .animate-scale-in  { animation: scaleIn 0.3s ease forwards; }
+  .animate-float     { animation: floatY 3s ease-in-out infinite; }
+  .animate-pulse-ring{ animation: pulseRing 2s ease-in-out infinite; }
+
+  /* Stagger helpers */
+  .delay-100 { animation-delay: 0.1s; }
+  .delay-200 { animation-delay: 0.2s; }
+  .delay-300 { animation-delay: 0.3s; }
+  .delay-400 { animation-delay: 0.4s; }
+  .delay-500 { animation-delay: 0.5s; }
+  .delay-600 { animation-delay: 0.6s; }
+
+  /* ─────────────────────────────────────────────
+     FOCUS RING
+  ───────────────────────────────────────────── */
+
+  .focus-ring:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* ─────────────────────────────────────────────
+     PRINT STYLES (preserved exactly)
+  ───────────────────────────────────────────── */
+
+  .rpt-print-header { display: none; }
+
+  @media print {
+    @page { size: A4 portrait; margin: 15mm 18mm; }
+
+    html, body {
+      background: white !important;
+      color: #111 !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .print\:hidden    { display: none !important; }
+    .print\:\!ml-0   { margin-left: 0 !important; }
+    .print\:p-0      { padding: 0 !important; }
+    .print\:m-0      { margin: 0 !important; }
+    .print\:max-w-none { max-width: 100% !important; }
+
+    .rpt-container {
+      border: none !important; border-radius: 0 !important;
+      box-shadow: none !important; background: white !important;
+      padding: 0 !important; margin: 0 !important;
+      max-width: 100% !important; width: 100% !important;
+    }
+
+    .rpt-print-header {
+      display: block !important; text-align: center;
+      margin-bottom: 18px; padding-bottom: 10px;
+      border-bottom: 2px solid #111;
+    }
+
+    .rpt-print-company { font-size: 18px; font-weight: 700; letter-spacing: 0.5px; color: #111; margin-bottom: 2px; }
+    .rpt-print-title   { font-size: 14px; font-weight: 600; color: #111; margin-bottom: 2px; }
+    .rpt-print-date    { font-size: 11px; color: #555; }
+
+    .rpt-section-title { background: none !important; border: none !important; cursor: default !important; color: #111 !important; }
+    .rpt-chevron       { display: none !important; }
+
+    .rpt-account-row, .rpt-total-cat, .rpt-total-section,
+    .rpt-total-grand, .rpt-tb-header, .rpt-tb-row,
+    .rpt-tb-totals, .rpt-footer {
+      color: #111 !important; background: none !important;
+    }
+
+    .rpt-total-cat     { border-color: #666 !important; }
+    .rpt-total-section { border-color: #111 !important; }
+    .rpt-total-grand   { border-color: #111 !important; }
+
+    .rpt-account-row span, .rpt-total-cat span,
+    .rpt-total-section span, .rpt-total-grand span { color: #111 !important; }
+
+    .rpt-footer { border-color: #ccc !important; font-size: 10px !important; color: #555 !important; }
+    .rpt-tb-header { border-color: #111 !important; }
+    .rpt-tb-row    { border-color: #ddd !important; }
+    .rpt-tb-totals { border-color: #111 !important; }
+  }
+}
+
+/* ── Hero Animations ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes floatY {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-6px); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+.animate-fade-up {
+  animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease both;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-float {
+  animation: floatY 4s ease-in-out infinite;
+}
