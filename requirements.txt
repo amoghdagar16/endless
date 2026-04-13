@@ -19,6 +19,7 @@ openai==1.10.0
 
 # Data (pydantic 2.10+ has Python 3.13 wheels)
 pydantic>=2.10.0,<3
+email-validator>=2.1.0
 
 # Utilities
 python-dateutil==2.8.2
