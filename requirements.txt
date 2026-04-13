@@ -24,3 +24,5 @@ email-validator>=2.1.0
 # Utilities
 python-dateutil==2.8.2
 Pillow>=11.0.0
+pandas>=2.0.0
+pdfminer.six>=20221105

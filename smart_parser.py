@@ -1,9 +1,5 @@
 import os
 import re
-import pandas as pd
-from pdfminer.high_level import extract_text
-from pdf2image import convert_from_path
-import easyocr
 from PIL import Image
 
 
@@ -16,19 +12,11 @@ def extract_fields(text: str):
         "description": None
     }
 
-    # Vendor extraction
     vendor_match = re.search(r"(?i)(?:from|vendor|supplier)[:\s]+([A-Za-z0-9& ,.'-]+)", text)
-
-    # Date extraction
     date_match = re.search(r"(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})", text)
-
-    # Total extraction (supports $, €, £, ₹)
     total_match = re.search(r"(?i)(?:total|amount\s+due|balance)[:\s\$€£₹]*([\d,]+\.\d{2})", text)
-
-    # Description extraction (explicit)
     description_match = re.search(r"(?i)(?:description|item|details)[:\s\-]+(.{5,80})", text)
 
-    # Fallback description: line before "Total" or "Amount"
     if not description_match:
         lines = text.splitlines()
         for i, line in enumerate(lines):
@@ -37,7 +25,6 @@ def extract_fields(text: str):
                     fields["description"] = lines[i - 1].strip()
                 break
 
-    # Assign found values
     if vendor_match:
         fields["vendor"] = vendor_match.group(1).strip()
     if date_match:
@@ -51,20 +38,30 @@ def extract_fields(text: str):
 
 
 def extract_from_image(filepath: str):
-    """Extract text from image using EasyOCR."""
+    """Extract text from image using EasyOCR (lazy import — heavy dependency)."""
+    try:
+        import easyocr
+    except ImportError:
+        raise RuntimeError("easyocr is not installed. OCR from images is unavailable.")
     reader = easyocr.Reader(['en'])
     result = reader.readtext(filepath, detail=0)
     return "\n".join(result)
 
 
 def extract_from_pdf(filepath: str):
-    """Extract text from PDF (text-based or scanned)."""
-    # Try text-based first
+    """Extract text from PDF (text-based first, then OCR fallback)."""
+    from pdfminer.high_level import extract_text
     text = extract_text(filepath)
     if len(text.strip()) > 50:
         return text
 
     # Fallback to OCR for scanned PDFs
+    try:
+        from pdf2image import convert_from_path
+        import easyocr
+    except ImportError:
+        return text  # Return whatever pdfminer got if OCR deps not available
+
     pages = convert_from_path(filepath, dpi=300)
     reader = easyocr.Reader(['en'])
     full_text = ""
@@ -79,8 +76,14 @@ def extract_from_pdf(filepath: str):
 
 def extract_from_csv(filepath: str):
     """Convert CSV content to readable text."""
-    df = pd.read_csv(filepath)
-    return df.to_string(index=False)
+    try:
+        import pandas as pd
+        df = pd.read_csv(filepath)
+        return df.to_string(index=False)
+    except ImportError:
+        # Fallback: read raw CSV text without pandas
+        with open(filepath, 'r') as f:
+            return f.read()
 
 
 def smart_extract(filepath: str):
@@ -88,17 +91,11 @@ def smart_extract(filepath: str):
     ext = os.path.splitext(filepath)[1].lower()
 
     if ext in [".jpg", ".jpeg", ".png"]:
-        print("📸 Image detected — using EasyOCR...")
         text = extract_from_image(filepath)
-
     elif ext == ".pdf":
-        print("📄 PDF detected — auto-selecting method...")
         text = extract_from_pdf(filepath)
-
     elif ext == ".csv":
-        print("🧾 CSV detected — parsing content...")
         text = extract_from_csv(filepath)
-
     else:
         raise ValueError("Unsupported file type")
 
