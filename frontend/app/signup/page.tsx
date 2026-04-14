@@ -92,7 +92,7 @@ export default function Signup() {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center p-4 py-10"
+      className="min-h-screen dot-grid flex items-center justify-center p-4 py-10"
       style={{ backgroundColor: 'var(--bg-primary)' }}
     >
       {/* Back */}

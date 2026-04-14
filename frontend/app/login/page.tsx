@@ -82,7 +82,7 @@ function LoginInner() {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center p-4 relative"
+      className="min-h-screen dot-grid flex items-center justify-center p-4 relative"
       style={{ backgroundColor: 'var(--bg-primary)' }}
     >
       {/* Back link */}
