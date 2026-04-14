@@ -74,19 +74,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const fetchUserData = async (authUser: SupabaseUser) => {
     if (!supabase) return
     try {
-      // Try Supabase direct read first; fall back to backend API if RLS blocks it
-      let userData: any = null
+      // Check sessionStorage cache first — avoids re-fetching on every page refresh
+      const cacheKey = `fintra_auth_${authUser.id}`
+      const cached = sessionStorage.getItem(cacheKey)
+      if (cached) {
+        try {
+          const { user: cachedUser, company: cachedCompany, ts } = JSON.parse(cached)
+          // Cache valid for 5 minutes
+          if (Date.now() - ts < 5 * 60 * 1000 && cachedUser) {
+            setUser(cachedUser)
+            setCompany(cachedCompany)
+            return
+          }
+        } catch { /* invalid cache, re-fetch */ }
+      }
 
-      const { data: directData, error: userError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', authUser.id)
-        .maybeSingle()
+      // Fetch user and company in parallel
+      const [userResult, _] = await Promise.all([
+        supabase.from('users').select('*').eq('id', authUser.id).maybeSingle(),
+        Promise.resolve() // placeholder for parallel expansion
+      ])
 
-      if (!userError && directData) {
-        userData = directData
-      } else {
-        // RLS may block direct read — use backend API (public endpoint, no auth needed)
+      let userData: any = userResult.data
+
+      // RLS may block direct read — fall back to backend API
+      if (userResult.error || !userData) {
         try {
           const res = await fetch(
             `${process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000'}/users/${authUser.id}`
@@ -95,9 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const json = await res.json()
             if (json?.data) userData = json.data
           }
-        } catch {
-          // Backend not reachable
-        }
+        } catch { /* Backend not reachable */ }
       }
 
       if (!userData) {
@@ -106,12 +116,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return
       }
 
-      setUser(userData)
-
-      // Fetch company: try Supabase first; fall back to backend API
+      // Fetch company in parallel with setting user state
+      let companyData: any = null
       if (userData.company_id) {
-        let companyData: any = null
-
         const { data: directCompany, error: companyError } = await supabase
           .from('companies')
           .select('*')
@@ -123,18 +130,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else {
           try {
             const res = await api.get<{ data?: any[] }>('/companies/')
-            if (res?.data && res.data.length > 0) {
-              companyData = res.data[0]
-            }
-          } catch {
-            // Backend not reachable
-          }
+            if (res?.data && res.data.length > 0) companyData = res.data[0]
+          } catch { /* Backend not reachable */ }
         }
-
-        setCompany(companyData)
-      } else {
-        setCompany(null)
       }
+
+      setUser(userData)
+      setCompany(companyData)
+
+      // Cache in sessionStorage so refresh doesn't re-fetch
+      try {
+        sessionStorage.setItem(cacheKey, JSON.stringify({
+          user: userData,
+          company: companyData,
+          ts: Date.now()
+        }))
+      } catch { /* sessionStorage not available (private browsing) */ }
+
     } catch (error) {
       console.error('Error fetching user data:', error)
     }
@@ -337,6 +349,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error
       setUser(null)
       setCompany(null)
+      // Clear auth cache
+      try {
+        Object.keys(sessionStorage)
+          .filter(k => k.startsWith('fintra_auth_'))
+          .forEach(k => sessionStorage.removeItem(k))
+      } catch { /* ignore */ }
       router.push('/login')
     } catch (error: any) {
       throw new Error(error.message || 'Failed to sign out')
@@ -345,6 +363,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshUser = async () => {
     if (supabaseUser) {
+      // Bust cache so refreshUser always gets fresh data
+      try { sessionStorage.removeItem(`fintra_auth_${supabaseUser.id}`) } catch { /* ignore */ }
       await fetchUserData(supabaseUser)
     }
   }
