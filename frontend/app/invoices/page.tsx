@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import Link from 'next/link'
 import {
   FileText, Loader2, Plus, X, Send, CheckCircle,
   ChevronDown, ChevronUp, Trash2, UserPlus, GripVertical, HelpCircle,
@@ -113,8 +114,10 @@ function StatusBadge({ status }: { status: string }) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function InvoicesPage() {
-  const { company } = useAuth()
+  const { user, company, loading: authLoading, refreshUser } = useAuth()
   const companyId = company?.id || null
+  const isViewer = (user?.role || '').toLowerCase() === 'viewer'
+  const [companyRetryCount, setCompanyRetryCount] = useState(0)
 
   // data
   const [invoices,   setInvoices]   = useState<any[]>([])
@@ -168,6 +171,13 @@ export default function InvoicesPage() {
   const [addingCustomer, setAddingCustomer] = useState(false)
 
   // ─── Load data ────────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (authLoading) return
+    if (companyId) return
+    if (companyRetryCount >= 3) return
+    refreshUser().finally(() => setCompanyRetryCount(c => c + 1))
+  }, [authLoading, companyId, companyRetryCount, refreshUser])
 
   useEffect(() => {
     if (!companyId) { setLoading(false); return }
@@ -279,6 +289,10 @@ export default function InvoicesPage() {
   // ─── Helpers ──────────────────────────────────────────────────────────────
 
   const openForm = () => {
+    if (isViewer) {
+      setToast({ ok: false, msg: 'Viewer access is read-only. You cannot create invoices.' })
+      return
+    }
     setLines([newLine(1, defaultAccountId)])
     setShowForm(true)
   }
@@ -316,6 +330,10 @@ export default function InvoicesPage() {
   }
 
   const handleAddCustomer = async () => {
+    if (isViewer) {
+      setToast({ ok: false, msg: 'Viewer access is read-only. You cannot add customers.' })
+      return
+    }
     if (!newName.trim()) return
     setAddingCustomer(true)
     try {
@@ -346,6 +364,10 @@ export default function InvoicesPage() {
   }
 
   const handleCreate = async () => {
+    if (isViewer) {
+      setToast({ ok: false, msg: 'Viewer access is read-only. You cannot create invoices.' })
+      return
+    }
     if (!customerId) { setToast({ ok: false, msg: 'Please select a customer.' }); return }
     const validLines = lines.filter(l => l.rate > 0)
     if (!validLines.length) { setToast({ ok: false, msg: 'Add at least one line item with a rate.' }); return }
@@ -384,6 +406,10 @@ export default function InvoicesPage() {
   }
 
   const handlePost = async (id: string) => {
+    if (isViewer) {
+      setToast({ ok: false, msg: 'Viewer access is read-only. You cannot post invoices.' })
+      return
+    }
     try {
       await api.patch(`/invoices/${id}`, { status: 'posted' })
       setToast({ ok: true, msg: 'Invoice posted — journal entry created automatically.' })
@@ -406,6 +432,10 @@ export default function InvoicesPage() {
   }
 
   const handleRecordPayment = async () => {
+    if (isViewer) {
+      setToast({ ok: false, msg: 'Viewer access is read-only. You cannot record payments.' })
+      return
+    }
     if (!payModal) return
     const amt = Number(payForm.amount)
     if (!amt || amt <= 0) { setToast({ ok: false, msg: 'Enter a valid amount.' }); return }
@@ -441,6 +471,12 @@ export default function InvoicesPage() {
     </div>
   )
 
+  if (authLoading || (!companyId && companyRetryCount < 3)) return (
+    <div className="flex min-h-[60vh] items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin" style={{ color: 'var(--accent)' }} />
+    </div>
+  )
+
   if (!companyId) return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 text-center">
       <FileText className="h-16 w-16 mb-4" style={{ color: 'var(--text-muted)' }} />
@@ -448,9 +484,9 @@ export default function InvoicesPage() {
       <p className="text-sm max-w-md mb-6" style={{ color: 'var(--text-secondary)' }}>
         Complete onboarding before creating invoices.
       </p>
-      <a href="/onboarding" className="btn btn-primary">
+      <Link href="/onboarding" className="btn btn-primary">
         Complete onboarding
-      </a>
+      </Link>
     </div>
   )
 
@@ -466,7 +502,7 @@ export default function InvoicesPage() {
           <h1 className="text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>Invoices</h1>
           <p className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>Send invoices and track what customers owe you.</p>
         </div>
-        {!showForm && (
+        {!showForm && !isViewer && (
           <button
             onClick={openForm}
             className="btn btn-primary"
@@ -480,6 +516,13 @@ export default function InvoicesPage() {
       {toast && (
         <div className={`px-4 py-3 rounded-lg text-sm font-medium ${toast.ok ? 'badge badge-success' : 'badge badge-danger'}`} style={{ display: 'block' }}>
           {toast.msg}
+        </div>
+      )}
+
+      {isViewer && (
+        <div className="px-4 py-3 rounded-lg text-sm font-medium"
+          style={{ color: 'var(--text-secondary)', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)' }}>
+          Viewer mode: invoices are read-only for your role.
         </div>
       )}
 
@@ -1003,10 +1046,12 @@ export default function InvoicesPage() {
               <>
                 <p className="text-base font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>No invoices yet</p>
                 <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>Create your first invoice to start tracking what customers owe you.</p>
-                <button onClick={openForm}
-                  className="btn btn-primary">
-                  <Plus className="w-4 h-4" /> Create Invoice
-                </button>
+                {!isViewer && (
+                  <button onClick={openForm}
+                    className="btn btn-primary">
+                    <Plus className="w-4 h-4" /> Create Invoice
+                  </button>
+                )}
               </>
             ) : (
               <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>No invoices match your filters.</p>
@@ -1137,14 +1182,14 @@ export default function InvoicesPage() {
                             </p>
                           )}
                           <div className="flex gap-2 pt-1">
-                            {inv.status === 'draft' && (
+                            {!isViewer && inv.status === 'draft' && (
                               <button
                                 onClick={e => { e.stopPropagation(); handlePost(inv.id) }}
                                 className="btn btn-success">
                                 <Send className="w-3.5 h-3.5" /> Post Invoice
                               </button>
                             )}
-                            {['posted', 'sent'].includes(inv.status) && Number(inv.balance_due) > 0 && (
+                            {!isViewer && ['posted', 'sent'].includes(inv.status) && Number(inv.balance_due) > 0 && (
                               <button
                                 onClick={e => { e.stopPropagation(); openPayModal(inv) }}
                                 className="btn btn-success">

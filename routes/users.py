@@ -303,3 +303,51 @@ def update_company_member_role(
         raise HTTPException(status_code=400, detail="Failed to update role")
 
     return {"status": "success", "data": updated.data[0]}
+
+
+@router.delete("/manage/company-members/{target_user_id}")
+def remove_company_member(
+    target_user_id: str,
+    auth: Dict[str, str] = Depends(require_min_role("admin")),
+):
+    """
+    Remove a member from the current company.
+    Rules:
+    - Cannot remove owner or admin accounts.
+    - Cannot remove yourself.
+    """
+    company_id = auth["company_id"]
+    actor_user_id = auth["user_id"]
+
+    if target_user_id == actor_user_id:
+        raise HTTPException(status_code=400, detail="You cannot remove yourself")
+
+    target_resp = table("users")\
+        .select("id, role, company_id")\
+        .eq("id", target_user_id)\
+        .eq("company_id", company_id)\
+        .limit(1)\
+        .execute()
+    if not target_resp.data:
+        raise HTTPException(status_code=404, detail="Target user not found in your company")
+
+    target = target_resp.data[0]
+    target_role = (target.get("role") or "user").lower()
+    if target_role in {"owner", "admin"}:
+        raise HTTPException(status_code=403, detail="Owner/admin accounts cannot be removed from this screen")
+
+    # Remove from organization membership but keep account.
+    updated = table("users")\
+        .update({
+            "company_id": None,
+            "role": "user",
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        })\
+        .eq("id", target_user_id)\
+        .eq("company_id", company_id)\
+        .execute()
+
+    if not updated.data:
+        raise HTTPException(status_code=400, detail="Failed to remove user from organization")
+
+    return {"status": "success", "data": updated.data[0]}

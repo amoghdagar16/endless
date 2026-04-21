@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from typing import Optional, Dict
 from datetime import datetime, timezone
 from database import supabase
-from middleware.auth import get_current_user_company
+from middleware.auth import get_current_user_company, require_min_role
 
 router = APIRouter(prefix="/accounting-periods", tags=["Accounting Periods"])
 
@@ -30,7 +30,7 @@ async def list_periods(auth: Dict[str, str] = Depends(get_current_user_company))
 @router.post("/")
 async def create_period(
     body: PeriodCreate,
-    auth: Dict[str, str] = Depends(get_current_user_company),
+    auth: Dict[str, str] = Depends(require_min_role("user")),
 ):
     """Create an accounting period."""
     cid = auth["company_id"]
@@ -50,7 +50,7 @@ async def create_period(
 @router.patch("/{period_id}/close")
 async def close_period(
     period_id: str,
-    auth: Dict[str, str] = Depends(get_current_user_company),
+    auth: Dict[str, str] = Depends(require_min_role("user")),
 ):
     """Close/lock the period (no more edits to entries on or before lock_date)."""
     cid = auth["company_id"]

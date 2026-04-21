@@ -6,7 +6,7 @@ Schema: documents (document_type, ocr_status, extracted_*).
 from fastapi import APIRouter, HTTPException, Depends
 from typing import Optional, Dict
 from database import supabase
-from middleware.auth import get_current_user_company
+from middleware.auth import get_current_user_company, require_min_role
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
 
@@ -31,7 +31,7 @@ async def list_documents(
 @router.post("/")
 async def create_document(
     body: dict,
-    auth: Dict[str, str] = Depends(get_current_user_company),
+    auth: Dict[str, str] = Depends(require_min_role("user")),
 ):
     """Create a document record (e.g. after file upload to storage). Links to journal_entry_id if provided."""
     cid = auth["company_id"]
@@ -59,7 +59,7 @@ async def create_document(
 async def update_document(
     document_id: str,
     body: dict,
-    auth: Dict[str, str] = Depends(get_current_user_company),
+    auth: Dict[str, str] = Depends(require_min_role("user")),
 ):
     """Update document (e.g. link to journal_entry_id after posting)."""
     cid = auth["company_id"]

@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from typing import Optional, Dict, List
 from datetime import date, datetime
 from database import supabase
-from middleware.auth import get_current_user_company
+from middleware.auth import get_current_user_company, require_min_role
 import os
 
 router = APIRouter(prefix="/bank", tags=["Banking"])
@@ -41,7 +41,7 @@ def _plaid_client():
 # ── Plaid: Link Token ──────────────────────────────────────────────
 
 @router.post("/plaid/link-token")
-def create_link_token(auth: Dict[str, str] = Depends(get_current_user_company)):
+def create_link_token(auth: Dict[str, str] = Depends(require_min_role("user"))):
     from plaid.model.link_token_create_request import LinkTokenCreateRequest
     from plaid.model.link_token_create_request_user import LinkTokenCreateRequestUser
     from plaid.model.products import Products
@@ -79,7 +79,7 @@ class ExchangeTokenBody(BaseModel):
 
 
 @router.post("/plaid/exchange-token")
-def exchange_token(body: ExchangeTokenBody, auth: Dict[str, str] = Depends(get_current_user_company)):
+def exchange_token(body: ExchangeTokenBody, auth: Dict[str, str] = Depends(require_min_role("user"))):
     from plaid.model.item_public_token_exchange_request import ItemPublicTokenExchangeRequest
     from plaid.model.accounts_get_request import AccountsGetRequest
 
@@ -251,7 +251,7 @@ def _sync_transactions(connection_id: str, access_token: str, company_id: str):
 
 
 @router.post("/plaid/sync/{connection_id}")
-def sync_connection(connection_id: str, auth: Dict[str, str] = Depends(get_current_user_company)):
+def sync_connection(connection_id: str, auth: Dict[str, str] = Depends(require_min_role("user"))):
     company_id = auth["company_id"]
     conn = supabase.table("bank_connections").select("provider_access_token, status").eq("id", connection_id).eq("company_id", company_id).single().execute()
     if not conn.data:
@@ -292,7 +292,7 @@ def list_connections(auth: Dict[str, str] = Depends(get_current_user_company)):
 
 
 @router.delete("/connections/{connection_id}")
-def disconnect_connection(connection_id: str, auth: Dict[str, str] = Depends(get_current_user_company)):
+def disconnect_connection(connection_id: str, auth: Dict[str, str] = Depends(require_min_role("user"))):
     from plaid.model.item_remove_request import ItemRemoveRequest
     company_id = auth["company_id"]
 
@@ -328,7 +328,7 @@ def list_bank_accounts(auth: Dict[str, str] = Depends(get_current_user_company))
 
 
 @router.patch("/accounts/{account_id}")
-def update_bank_account(account_id: str, body: dict, auth: Dict[str, str] = Depends(get_current_user_company)):
+def update_bank_account(account_id: str, body: dict, auth: Dict[str, str] = Depends(require_min_role("user"))):
     cid = auth["company_id"]
     allowed = {"name", "linked_account_id", "is_active"}
     data = {k: v for k, v in body.items() if k in allowed}
@@ -390,7 +390,7 @@ def list_transactions(
 
 
 @router.patch("/transactions/{txn_id}")
-def update_transaction(txn_id: str, body: dict, auth: Dict[str, str] = Depends(get_current_user_company)):
+def update_transaction(txn_id: str, body: dict, auth: Dict[str, str] = Depends(require_min_role("user"))):
     cid = auth["company_id"]
     allowed = {"user_selected_account_id", "memo", "status", "suggested_account_id"}
     data = {k: v for k, v in body.items() if k in allowed}
@@ -403,7 +403,7 @@ def update_transaction(txn_id: str, body: dict, auth: Dict[str, str] = Depends(g
 
 
 @router.post("/transactions/{txn_id}/exclude")
-def exclude_transaction(txn_id: str, auth: Dict[str, str] = Depends(get_current_user_company)):
+def exclude_transaction(txn_id: str, auth: Dict[str, str] = Depends(require_min_role("user"))):
     cid = auth["company_id"]
     row = supabase.table("bank_transactions").update({"status": "excluded"}).eq("id", txn_id).eq("company_id", cid).execute()
     if not row.data:
@@ -412,7 +412,7 @@ def exclude_transaction(txn_id: str, auth: Dict[str, str] = Depends(get_current_
 
 
 @router.post("/transactions/{txn_id}/undo-exclude")
-def undo_exclude(txn_id: str, auth: Dict[str, str] = Depends(get_current_user_company)):
+def undo_exclude(txn_id: str, auth: Dict[str, str] = Depends(require_min_role("user"))):
     cid = auth["company_id"]
     row = supabase.table("bank_transactions").update({"status": "unreviewed"}).eq("id", txn_id).eq("company_id", cid).execute()
     if not row.data:
@@ -428,7 +428,7 @@ class PostTransactionBody(BaseModel):
 
 
 @router.post("/transactions/{txn_id}/post")
-def post_transaction(txn_id: str, body: PostTransactionBody, auth: Dict[str, str] = Depends(get_current_user_company)):
+def post_transaction(txn_id: str, body: PostTransactionBody, auth: Dict[str, str] = Depends(require_min_role("user"))):
     """Create a journal entry from a bank transaction and mark it as reviewed."""
     import traceback
     cid = auth["company_id"]

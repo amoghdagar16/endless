@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from typing import Optional, Dict
 from database import supabase
-from middleware.auth import get_current_user_company
+from middleware.auth import get_current_user_company, require_min_role
 
 router = APIRouter(prefix="/contacts", tags=["Contacts"])
 
@@ -51,7 +51,7 @@ async def get_contact(
 @router.post("/")
 async def create_contact(
     body: ContactCreate,
-    auth: Dict[str, str] = Depends(get_current_user_company),
+    auth: Dict[str, str] = Depends(require_min_role("user")),
 ):
     """Create a customer or vendor."""
     cid = auth["company_id"]
@@ -74,7 +74,7 @@ async def create_contact(
 async def update_contact(
     contact_id: str,
     body: dict,
-    auth: Dict[str, str] = Depends(get_current_user_company),
+    auth: Dict[str, str] = Depends(require_min_role("user")),
 ):
     """Update a contact."""
     cid = auth["company_id"]
@@ -87,7 +87,7 @@ async def update_contact(
 @router.delete("/{contact_id}")
 async def delete_contact(
     contact_id: str,
-    auth: Dict[str, str] = Depends(get_current_user_company),
+    auth: Dict[str, str] = Depends(require_min_role("user")),
 ):
     """Delete a contact."""
     cid = auth["company_id"]

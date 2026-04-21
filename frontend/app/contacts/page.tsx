@@ -1,13 +1,14 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import Link from 'next/link'
 import {
   Users, Loader2, Plus, X, Search, MoreHorizontal,
   ArrowUp, ArrowDown, ArrowUpDown, Mail, Phone,
   Building2, User, Edit2, Trash2,
 } from 'lucide-react'
 import { api } from '@/lib/api'
-import { useAuth } from '@/contexts/AuthContext'
+import { useCompanyReady } from '@/hooks/useCompanyReady'
 
 const INP = 'w-full px-3 py-2 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-[var(--accent)] transition-all'
 const INP_S: React.CSSProperties = { backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }
@@ -26,8 +27,7 @@ function TypeBadge({ type }: { type: string }) {
 }
 
 export default function ContactsPage() {
-  const { company } = useAuth()
-  const companyId = company?.id || null
+  const { companyId, companyLoading, companyMissing } = useCompanyReady()
 
   const [contacts, setContacts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -154,20 +154,20 @@ export default function ContactsPage() {
     return sortDir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
   }
 
-  if (loading) return (
+  if (companyLoading || loading) return (
     <div className="flex min-h-[60vh] items-center justify-center">
       <Loader2 className="h-8 w-8 animate-spin" style={{ color: 'var(--accent)' }} />
     </div>
   )
 
-  if (!companyId) return (
+  if (companyMissing) return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 text-center">
       <Users className="h-16 w-16 mb-4" style={{ color: 'var(--text-muted)' }} />
       <h2 className="text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>No company set up</h2>
       <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>Complete onboarding to manage contacts.</p>
-      <a href="/onboarding" className="btn btn-primary">
+      <Link href="/onboarding" className="btn btn-primary">
         Complete onboarding
-      </a>
+      </Link>
     </div>
   )
 

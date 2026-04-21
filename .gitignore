@@ -38,5 +38,8 @@ Thumbs.db
 .vscode/
 *.swp
 
+# Local dev script logs / PIDs
+.dev/
+
 # Playwright MCP logs
 .playwright-mcp/

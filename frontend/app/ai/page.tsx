@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { api } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCompanyReady } from "@/hooks/useCompanyReady";
 import { Loader2, Sparkles, Target, BarChart3, Globe, Zap, RefreshCw, TrendingUp } from "lucide-react";
 
 interface InsightCard {
@@ -23,8 +25,8 @@ interface CachedInsights {
 }
 
 export default function AIConsolePage() {
-  const { company, user } = useAuth();
-  const companyId = company?.id || null;
+  const { user } = useAuth();
+  const { companyId, companyLoading, companyMissing } = useCompanyReady();
   const canAccessAI = ["owner", "admin", "accountant"].includes((user?.role || "").toLowerCase());
   const [loading, setLoading] = useState(false);
   const [insights, setInsights] = useState<InsightCard[]>([]);
@@ -178,13 +180,21 @@ export default function AIConsolePage() {
     }
   };
 
-  if (!companyId) {
+  if (companyLoading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" style={{ color: 'var(--accent)' }} />
+      </div>
+    );
+  }
+
+  if (companyMissing) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3 text-center">
         <Target className="w-10 h-10" style={{ color: 'var(--text-muted)' }} />
         <h2 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>Complete Onboarding First</h2>
         <p className="text-sm max-w-sm" style={{ color: 'var(--text-secondary)' }}>Set up your company profile to unlock AI insights.</p>
-        <a href="/onboarding" className="btn btn-primary btn-sm">Complete onboarding</a>
+        <Link href="/onboarding" className="btn btn-primary btn-sm">Complete onboarding</Link>
       </div>
     );
   }

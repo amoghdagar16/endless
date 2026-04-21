@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from typing import Optional, Dict, List
 from database import supabase
-from middleware.auth import get_current_user_company
+from middleware.auth import get_current_user_company, require_min_role
 
 router = APIRouter(prefix="/reconciliation", tags=["Reconciliation"])
 
@@ -41,7 +41,7 @@ async def list_sessions(
 @router.post("/sessions")
 async def create_session(
     body: SessionCreate,
-    auth: Dict[str, str] = Depends(get_current_user_company),
+    auth: Dict[str, str] = Depends(require_min_role("user")),
 ):
     """Start a reconciliation session (statement dates and ending balance)."""
     cid = auth["company_id"]
@@ -81,7 +81,7 @@ async def get_session(
 async def add_cleared_item(
     session_id: str,
     body: ClearItemBody,
-    auth: Dict[str, str] = Depends(get_current_user_company),
+    auth: Dict[str, str] = Depends(require_min_role("user")),
 ):
     """Mark a bank transaction as cleared in this session."""
     cid = auth["company_id"]
@@ -100,7 +100,7 @@ async def add_cleared_item(
 @router.patch("/sessions/{session_id}/complete")
 async def complete_session(
     session_id: str,
-    auth: Dict[str, str] = Depends(get_current_user_company),
+    auth: Dict[str, str] = Depends(require_min_role("user")),
 ):
     """Mark reconciliation session as completed."""
     cid = auth["company_id"]

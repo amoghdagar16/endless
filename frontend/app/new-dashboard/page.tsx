@@ -136,9 +136,11 @@ function KpiCard({
 // ── Main Dashboard ─────────────────────────────────────────────────
 
 export default function NewDashboard() {
-  const { company, loading: authLoading, refreshUser } = useAuth()
+  const { company, user, loading: authLoading, refreshUser } = useAuth()
   const co = company as any
-  const companyId = co?.id || null
+  // Prefer loaded company row; fall back to users.company_id so we don't blank-screen
+  // when JWT/session is valid but the companies join/cache hasn't hydrated yet.
+  const companyId = co?.id || user?.company_id || null
 
   const [period, setPeriod] = useState<Period>('this_month')
   const [data, setData] = useState<DashboardData | null>(null)
@@ -282,7 +284,27 @@ export default function NewDashboard() {
     )
   }
 
-  if (!data) return null
+  if (!data) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4 p-6">
+        <Loader2 className="w-10 h-10 animate-spin" style={{ color: 'var(--accent)' }} aria-hidden />
+        <p className="text-sm text-center max-w-md" style={{ color: 'var(--text-secondary)' }}>
+          Dashboard data is still unavailable. This can happen after sign-in if the API is slow or returned an empty payload.
+        </p>
+        <button
+          type="button"
+          onClick={() => fetchData()}
+          className="flex items-center gap-2 text-sm px-4 py-2 rounded-lg"
+          style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }}
+        >
+          <RefreshCw className="w-4 h-4" /> Retry
+        </button>
+        <Link href="/onboarding" className="text-xs no-underline" style={{ color: 'var(--accent)' }}>
+          Go to onboarding
+        </Link>
+      </div>
+    )
+  }
 
   const { kpis } = data
 

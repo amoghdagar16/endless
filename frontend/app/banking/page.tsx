@@ -332,8 +332,9 @@ function PostModal({
 // ── Main Page ──────────────────────────────────────────────────────
 
 export default function BankingPage() {
-  const { company } = useAuth()
+  const { company, loading: authLoading, refreshUser } = useAuth()
   const co = company as any
+  const [companyRetryCount, setCompanyRetryCount] = useState(0)
 
   const [accounts, setAccounts] = useState<BankAccount[]>([])
   const [transactions, setTransactions] = useState<BankTransaction[]>([])
@@ -376,6 +377,13 @@ export default function BankingPage() {
     } catch { setTransactions([]) }
     finally { setTxnLoading(false) }
   }, [co?.id, tab, selectedAccountId, search])
+
+  useEffect(() => {
+    if (authLoading) return
+    if (co?.id) return
+    if (companyRetryCount >= 3) return
+    refreshUser().finally(() => setCompanyRetryCount(c => c + 1))
+  }, [authLoading, co?.id, companyRetryCount, refreshUser])
 
   useEffect(() => {
     if (!co?.id) { setLoading(false); return }
@@ -468,6 +476,15 @@ export default function BankingPage() {
   }
 
   // ── Render guards ──
+  if (authLoading || (!co?.id && companyRetryCount < 3)) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-8">
+        <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'var(--accent)' }} />
+        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Loading your banking workspace...</p>
+      </div>
+    )
+  }
+
   if (!co?.id) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-8">

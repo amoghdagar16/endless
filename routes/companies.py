@@ -2,11 +2,143 @@ from fastapi import APIRouter, HTTPException, Depends, Header
 from database import table, supabase
 from typing import Dict, Optional
 from middleware.auth import get_current_user_company, require_role, verify_token, ensure_user_row_from_token
+from pydantic import BaseModel
+from lib.mailer import send_email
 import logging
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/companies", tags=["Companies"])
+
+
+class JoinCompanyRequestBody(BaseModel):
+    company_id: Optional[str] = None
+    company_name: str
+    note: Optional[str] = None
+
+
+# Lookup company by name (for onboarding "join existing company" flow)
+@router.get("/lookup")
+async def lookup_company_by_name(
+    name: str,
+    user_id: str = Depends(verify_token),
+):
+    try:
+        normalized_name = (name or "").strip()
+        if not normalized_name:
+            raise HTTPException(status_code=400, detail="Company name is required")
+
+        # Prefer exact match first
+        exact = table("companies")\
+            .select("id, name, onboarding_completed, created_at")\
+            .eq("name", normalized_name)\
+            .order("created_at")\
+            .limit(1)\
+            .execute()
+        if exact.data:
+            return {"status": "success", "data": exact.data}
+
+        # Fallback: case-insensitive exact-ish match
+        ci = table("companies")\
+            .select("id, name, onboarding_completed, created_at")\
+            .ilike("name", normalized_name)\
+            .order("created_at")\
+            .limit(1)\
+            .execute()
+        return {"status": "success", "data": ci.data or []}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/request-join")
+async def request_to_join_company(
+    body: JoinCompanyRequestBody,
+    authorization: Optional[str] = Header(None),
+    user_id: str = Depends(verify_token),
+):
+    """
+    Request access to an existing company.
+    Sends authorization email to all owner/admin members in that company.
+    """
+    try:
+        normalized_name = (body.company_name or "").strip()
+        if not normalized_name:
+            raise HTTPException(status_code=400, detail="Company name is required")
+
+        # Ensure requester user row exists.
+        requester_resp = supabase.table("users").select("id, email, full_name, company_id").eq("id", user_id).limit(1).execute()
+        if not requester_resp.data:
+            ensure_user_row_from_token(authorization)
+            requester_resp = supabase.table("users").select("id, email, full_name, company_id").eq("id", user_id).limit(1).execute()
+        if not requester_resp.data:
+            raise HTTPException(status_code=404, detail="Requester user not found")
+        requester = requester_resp.data[0]
+
+        if requester.get("company_id"):
+            raise HTTPException(status_code=400, detail="You are already assigned to a company")
+
+        company = None
+        if body.company_id:
+            by_id = table("companies").select("id, name, onboarding_completed").eq("id", body.company_id).limit(1).execute()
+            if by_id.data:
+                company = by_id.data[0]
+        if not company:
+            by_name = table("companies")\
+                .select("id, name, onboarding_completed")\
+                .ilike("name", normalized_name)\
+                .order("created_at")\
+                .limit(1)\
+                .execute()
+            if by_name.data:
+                company = by_name.data[0]
+        if not company:
+            raise HTTPException(status_code=404, detail="Company not found")
+
+        company_id = company["id"]
+        company_name = company.get("name") or normalized_name
+
+        approvers_resp = table("users")\
+            .select("email, full_name, role")\
+            .eq("company_id", company_id)\
+            .in_("role", ["owner", "admin"])\
+            .execute()
+        approvers = approvers_resp.data or []
+        approver_emails = [a.get("email", "").strip() for a in approvers if a.get("email")]
+        if not approver_emails:
+            raise HTTPException(status_code=400, detail="No owner/admin emails found for this company")
+
+        requester_name = requester.get("full_name") or requester.get("email") or "Unknown user"
+        requester_email = requester.get("email") or "unknown-email"
+        note = (body.note or "").strip()
+
+        subject = f"[Fintra] Join request for {company_name}"
+        admin_url = "http://127.0.0.1:3000/admin"
+        text_body = (
+            f"{requester_name} ({requester_email}) requested access to {company_name}.\n\n"
+            f"Requester user id: {user_id}\n"
+            f"Company id: {company_id}\n"
+            f"Note: {note if note else '(none)'}\n\n"
+            f"Review and authorize from the Admin panel:\n{admin_url}\n"
+        )
+        html_body = f"""
+        <p><strong>{requester_name}</strong> ({requester_email}) requested access to <strong>{company_name}</strong>.</p>
+        <p>
+          <strong>Requester user id:</strong> {user_id}<br/>
+          <strong>Company id:</strong> {company_id}<br/>
+          <strong>Note:</strong> {note if note else '(none)'}
+        </p>
+        <p>Review and authorize from the Admin panel:<br/>
+        <a href="{admin_url}">{admin_url}</a></p>
+        """
+
+        send_email(subject=subject, recipients=approver_emails, text_body=text_body, html_body=html_body)
+        return {"status": "success", "message": "Join request sent to company owner/admin"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to send join request email: {e}")
 
 
 # Get all companies (with users included)

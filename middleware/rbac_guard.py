@@ -3,12 +3,11 @@ import os
 
 from fastapi import Request
 from fastapi.responses import JSONResponse
-from jose import jwt, JWTError
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from database import table
+from database import table, supabase
+from middleware.auth import _get_payload_from_token
 
-SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
 MUTATING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
 USER_ALLOWED_CREATE_PATHS = {
@@ -32,18 +31,22 @@ def _extract_bearer(authorization: Optional[str]) -> Optional[str]:
 
 
 def _decode_user_id(token: Optional[str]) -> Optional[str]:
-    if not token or not SUPABASE_JWT_SECRET:
+    if not token:
         return None
-    try:
-        payload = jwt.decode(
-            token,
-            SUPABASE_JWT_SECRET,
-            algorithms=["HS256"],
-            audience="authenticated",
-        )
+
+    # Support both legacy HS256 and modern Supabase JWKS-based tokens.
+    payload = _get_payload_from_token(token)
+    if payload and payload.get("sub"):
         return payload.get("sub")
-    except JWTError:
+
+    # Fallback to Supabase auth API when signature mode is unknown.
+    try:
+        response = supabase.auth.get_user(token)
+        if response and response.user:
+            return response.user.id
+    except Exception:
         return None
+    return None
 
 
 def _load_role(user_id: Optional[str]) -> Optional[Dict[str, str]]:

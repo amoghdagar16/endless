@@ -4,8 +4,8 @@ const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
-// Auth/API can be slow on first load or poor networks; use a longer timeout (60s)
-const SUPABASE_FETCH_TIMEOUT_MS = 60_000
+// Keep auth bootstrap responsive; fail fast instead of hanging the app loader.
+const SUPABASE_FETCH_TIMEOUT_MS = 10_000
 
 function fetchWithTimeout(
   input: RequestInfo | URL,

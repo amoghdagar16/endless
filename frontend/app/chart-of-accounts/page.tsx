@@ -17,7 +17,7 @@ import {
   Check,
 } from 'lucide-react'
 import { api } from '@/lib/api'
-import { useAuth } from '@/contexts/AuthContext'
+import { useCompanyReady } from '@/hooks/useCompanyReady'
 
 interface Account {
   id: string
@@ -47,8 +47,7 @@ interface EditModal {
 }
 
 export default function ChartOfAccounts() {
-  const { company } = useAuth()
-  const companyId = company?.id || null
+  const { companyId, companyLoading, companyMissing } = useCompanyReady()
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loading, setLoading] = useState(true)
   const [uploadingCSV, setUploadingCSV] = useState(false)
@@ -208,10 +207,21 @@ export default function ChartOfAccounts() {
 
   const hasAccounts = accounts.length > 0
 
-  if (!companyId) {
+  if (companyLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'var(--accent)' }} />
+      </div>
+    )
+  }
+
+  if (companyMissing || !companyId) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 text-center">
+        <FolderTree className="h-16 w-16 mb-4" style={{ color: 'var(--text-muted)' }} />
+        <h2 className="text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>No company set up</h2>
+        <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>Finish onboarding to use the Chart of Accounts.</p>
+        <Link href="/onboarding" className="btn btn-primary">Complete onboarding</Link>
       </div>
     )
   }

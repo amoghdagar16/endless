@@ -491,7 +491,7 @@ export function AIAnalysisWidget({
       }}
     >
       <p style={{ color: 'var(--text-muted)' }}>AI financial analysis is available via the AI Insights section.</p>
-      <Link href="/ai-insights" className="inline-flex items-center gap-1.5 text-xs font-medium" style={{ color: 'var(--neon-cyan)' }}>
+      <Link href="/ai" className="inline-flex items-center gap-1.5 text-xs font-medium" style={{ color: 'var(--neon-cyan)' }}>
         Open AI Insights <ArrowUpRight className="w-3 h-3" />
       </Link>
     </div>

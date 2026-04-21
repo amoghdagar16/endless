@@ -1,10 +1,12 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import Link from 'next/link'
 import { BarChart3, Loader2, ChevronDown, ChevronRight, Printer } from 'lucide-react'
 import { PDFDownloadLink } from '@react-pdf/renderer'
 import { api } from '@/lib/api'
 import { useAuth } from '@/contexts/AuthContext'
+import { useCompanyReady } from '@/hooks/useCompanyReady'
 import {
   BalanceSheetPDF,
   ProfitLossPDF,
@@ -299,7 +301,8 @@ const TAB_TITLES: Record<Tab, string> = {
 }
 
 export default function ReportsPage() {
-  const { company, user } = useAuth()
+  const { user } = useAuth()
+  const { company, companyId, companyLoading, companyMissing } = useCompanyReady()
   const canAccessReports = ['owner', 'admin', 'accountant'].includes((user?.role || '').toLowerCase())
   const [activeTab, setActiveTab] = useState<Tab>('balance-sheet')
   const [data, setData] = useState<any>(null)
@@ -326,7 +329,7 @@ export default function ReportsPage() {
   const needsRange = activeTab === 'profit-loss' || activeTab === 'cash-flow'
 
   const fetchReport = useCallback(async () => {
-    if (!company?.id) return
+    if (!companyId) return
     setLoading(true)
     setData(null)
     try {
@@ -340,19 +343,27 @@ export default function ReportsPage() {
     } finally {
       setLoading(false)
     }
-  }, [company?.id, activeTab, asOfDate, startDate, endDate, needsRange])
+  }, [companyId, activeTab, asOfDate, startDate, endDate, needsRange])
 
   useEffect(() => {
     fetchReport()
   }, [fetchReport])
 
-  if (!company?.id) {
+  if (companyLoading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" style={{ color: 'var(--accent)' }} />
+      </div>
+    )
+  }
+
+  if (companyMissing) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 text-center">
         <BarChart3 className="h-16 w-16 mb-4" style={{ color: 'var(--text-muted)' }} />
         <h2 className="text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>No company set up</h2>
         <p className="max-w-md mb-6" style={{ color: 'var(--text-secondary)' }}>Finish onboarding to use Reports.</p>
-        <a href="/onboarding" className="btn btn-primary">Complete onboarding</a>
+        <Link href="/onboarding" className="btn btn-primary">Complete onboarding</Link>
       </div>
     )
   }

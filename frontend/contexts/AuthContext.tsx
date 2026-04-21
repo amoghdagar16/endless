@@ -4,7 +4,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { User as SupabaseUser } from '@supabase/supabase-js'
 import { supabase, User, Company } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
-import { api } from '@/lib/api'
+import { api, API_BASE } from '@/lib/api'
 
 interface LoginLockoutState {
   locked: boolean
@@ -33,6 +33,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
 
   const normalizeEmail = (email: string) => email.trim().toLowerCase()
+  const AUTH_CACHE_TTL_MS = 60 * 1000
+  const API_FETCH_TIMEOUT_MS = 8000
+  const AUTH_INIT_TIMEOUT_MS = 12000
+
+  const fetchJsonWithTimeout = async (url: string, init?: RequestInit) => {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), API_FETCH_TIMEOUT_MS)
+    try {
+      const response = await fetch(url, {
+        ...init,
+        signal: controller.signal,
+      })
+      return response
+    } finally {
+      clearTimeout(timeoutId)
+    }
+  }
+
+  const getStorage = () => {
+    if (typeof window === 'undefined') return null
+    try {
+      return window.localStorage
+    } catch {
+      return window.sessionStorage
+    }
+  }
 
   const toLockoutError = (remainingSeconds: number) => {
     const error = new Error(`Too many failed attempts. Try again in ${Math.max(1, remainingSeconds)} seconds.`) as Error & {
@@ -74,17 +100,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const fetchUserData = async (authUser: SupabaseUser) => {
     if (!supabase) return
     try {
-      // Check sessionStorage cache first — avoids re-fetching on every page refresh
-      const cacheKey = `fintra_auth_${authUser.id}`
-      const cached = sessionStorage.getItem(cacheKey)
+      // Check local cache first to keep PWA reloads fast.
+      const cacheKey = `fintra_auth_v2_${authUser.id}`
+      const storage = getStorage()
+      const cached = storage?.getItem(cacheKey)
       if (cached) {
         try {
           const { user: cachedUser, company: cachedCompany, ts } = JSON.parse(cached)
-          // Cache valid for 5 minutes
-          if (Date.now() - ts < 5 * 60 * 1000 && cachedUser) {
+          const cacheIsFresh = Date.now() - ts < AUTH_CACHE_TTL_MS
+          // Do not trust cache that indicates onboarding incomplete or missing company.
+          // This avoids false redirects to onboarding after completion.
+          const cacheIsTrusted = Boolean(cachedUser?.company_id) && cachedCompany?.onboarding_completed !== false
+          if (cacheIsFresh && cachedUser && cacheIsTrusted) {
             setUser(cachedUser)
             setCompany(cachedCompany)
-            return
           }
         } catch { /* invalid cache, re-fetch */ }
       }
@@ -100,9 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // RLS may block direct read — fall back to backend API
       if (userResult.error || !userData) {
         try {
-          const res = await fetch(
-            `${process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000'}/users/${authUser.id}`
-          )
+          const res = await fetchJsonWithTimeout(`${API_BASE}/users/${authUser.id}`)
           if (res.ok) {
             const json = await res.json()
             if (json?.data) userData = json.data
@@ -138,14 +165,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(userData)
       setCompany(companyData)
 
-      // Cache in sessionStorage so refresh doesn't re-fetch
+      // Cache in browser storage so refresh doesn't re-fetch
       try {
-        sessionStorage.setItem(cacheKey, JSON.stringify({
+        storage?.setItem(cacheKey, JSON.stringify({
           user: userData,
           company: companyData,
           ts: Date.now()
         }))
-      } catch { /* sessionStorage not available (private browsing) */ }
+      } catch { /* storage not available */ }
 
     } catch (error) {
       console.error('Error fetching user data:', error)
@@ -153,23 +180,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
-    if (!supabase) {
+    const supabaseClient = supabase
+    if (!supabaseClient) {
       console.error('Supabase client is not configured. Set NEXT_PUBLIC_SUPABASE_URL / KEY.')
       setLoading(false)
       return
     }
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSupabaseUser(session?.user ?? null)
-      if (session?.user) {
-        await fetchUserData(session.user)
+    let disposed = false
+    let initFinished = false
+    const initTimeout = setTimeout(() => {
+      if (!initFinished && !disposed) {
+        console.warn('Auth initialization timed out; continuing without blocking UI.')
+        setLoading(false)
       }
-      setLoading(false)
-    })
+    }, AUTH_INIT_TIMEOUT_MS)
+
+    const initAuth = async () => {
+      try {
+        const { data: { session } } = await supabaseClient.auth.getSession()
+        if (disposed) return
+        setSupabaseUser(session?.user ?? null)
+        if (session?.user) {
+          await fetchUserData(session.user)
+        }
+      } catch (error) {
+        console.error('Auth initialization failed:', error)
+      } finally {
+        initFinished = true
+        if (!disposed) {
+          setLoading(false)
+        }
+      }
+    }
+    initAuth()
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = supabaseClient.auth.onAuthStateChange(async (_event, session) => {
+      if (disposed) return
       setSupabaseUser(session?.user ?? null)
       if (session?.user) {
         await fetchUserData(session.user)
@@ -180,7 +229,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false)
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      disposed = true
+      clearTimeout(initTimeout)
+      subscription.unsubscribe()
+    }
   }, [])
 
   const signUp = async (email: string, password: string, fullName: string) => {
@@ -209,8 +262,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (data.user) {
         // Create user record via backend API (uses service_role key, bypasses RLS)
-        const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000'
-        const response = await fetch(`${apiBase}/users/`, {
+        const response = await fetchJsonWithTimeout(`${API_BASE}/users/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -292,8 +344,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .maybeSingle()
 
         if (!existingUser) {
-          const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000'
-          await fetch(`${apiBase}/users/`, {
+          await fetchJsonWithTimeout(`${API_BASE}/users/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -339,32 +390,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signOut = async () => {
-    if (!supabase) {
-      setUser(null)
-      setCompany(null)
-      return
-    }
-    try {
-      const { error } = await supabase.auth.signOut()
-      if (error) throw error
-      setUser(null)
-      setCompany(null)
-      // Clear auth cache
+    let signOutError: any = null
+
+    if (supabase) {
       try {
-        Object.keys(sessionStorage)
-          .filter(k => k.startsWith('fintra_auth_'))
-          .forEach(k => sessionStorage.removeItem(k))
-      } catch { /* ignore */ }
-      router.push('/login')
-    } catch (error: any) {
-      throw new Error(error.message || 'Failed to sign out')
+        const { error } = await supabase.auth.signOut()
+        if (error) signOutError = error
+      } catch (error: any) {
+        signOutError = error
+      }
+    }
+
+    // Always clear local state and cached auth so logout works even if
+    // Supabase signOut fails due transient network/session issues.
+    setSupabaseUser(null)
+    setUser(null)
+    setCompany(null)
+
+    try {
+      const storage = getStorage()
+      if (storage) {
+        Object.keys(storage)
+          .filter(k => k.startsWith('fintra_auth_') || k === 'admin_session_token')
+          .forEach(k => storage.removeItem(k))
+      }
+    } catch { /* ignore */ }
+
+    router.replace('/login')
+
+    if (signOutError) {
+      console.warn('Supabase signOut returned an error, local logout still completed.', signOutError)
     }
   }
 
   const refreshUser = async () => {
     if (supabaseUser) {
       // Bust cache so refreshUser always gets fresh data
-      try { sessionStorage.removeItem(`fintra_auth_${supabaseUser.id}`) } catch { /* ignore */ }
+      try {
+        const storage = getStorage()
+        storage?.removeItem(`fintra_auth_v2_${supabaseUser.id}`)
+      } catch { /* ignore */ }
       await fetchUserData(supabaseUser)
     }
   }

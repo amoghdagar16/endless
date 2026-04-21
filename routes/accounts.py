@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from typing import Optional, Dict
 from database import supabase
-from middleware.auth import get_current_user_company
+from middleware.auth import get_current_user_company, require_min_role
 
 router = APIRouter()
 
@@ -65,7 +65,7 @@ def get_account(account_id: str, auth: Dict[str, str] = Depends(get_current_user
     return response.data
 
 @router.post("/")
-def create_account(account: AccountCreate, auth: Dict[str, str] = Depends(get_current_user_company)):
+def create_account(account: AccountCreate, auth: Dict[str, str] = Depends(require_min_role("user"))):
     """Create a new account for authenticated user's company"""
     try:
         company_id = auth["company_id"]  # Use authenticated company_id
@@ -104,7 +104,7 @@ def _account_update_to_db(account: AccountUpdate) -> dict:
 
 
 @router.patch("/{account_id}")
-def update_account(account_id: str, account: AccountUpdate, auth: Dict[str, str] = Depends(get_current_user_company)):
+def update_account(account_id: str, account: AccountUpdate, auth: Dict[str, str] = Depends(require_min_role("user"))):
     """Update an existing account"""
     company_id = auth["company_id"]
 
@@ -177,7 +177,7 @@ def get_account_register(
 
 
 @router.delete("/{account_id}")
-def delete_account(account_id: str, auth: Dict[str, str] = Depends(get_current_user_company)):
+def delete_account(account_id: str, auth: Dict[str, str] = Depends(require_min_role("user"))):
     """Delete an account"""
     company_id = auth["company_id"]
 

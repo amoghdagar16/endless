@@ -47,6 +47,9 @@ app.add_middleware(
         "https://endlessfinance.vercel.app",
         "https://endless-a1l924daz-amogh-pennys-projects.vercel.app",
     ] + _extra_origins,
+    # Allow local-network dev hosts (e.g. http://10.x.x.x:3000, http://192.168.x.x:3000)
+    # so login/API calls work when frontend is opened via LAN IP instead of localhost.
+    allow_origin_regex=r"^http://((localhost)|(127\.0\.0\.1)|(0\.0\.0\.0)|(10\.\d+\.\d+\.\d+)|(192\.168\.\d+\.\d+)|(172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+))(:\d+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

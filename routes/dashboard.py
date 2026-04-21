@@ -3,7 +3,7 @@ from database import supabase
 from datetime import date, datetime, timedelta
 from collections import defaultdict
 from typing import Dict, List, Any
-from middleware.auth import get_current_user_company
+from middleware.auth import get_current_user_company, require_min_role
 
 router = APIRouter()
 
@@ -107,7 +107,7 @@ def get_widget_preferences(auth: Dict[str, str] = Depends(get_current_user_compa
 
 
 @router.put("/widgets")
-def save_widget_preferences(payload: dict, auth: Dict[str, str] = Depends(get_current_user_company)):
+def save_widget_preferences(payload: dict, auth: Dict[str, str] = Depends(require_min_role("user"))):
     company_id = auth["company_id"]
     user_id = auth.get("user_id", "")
     widgets = payload.get("widgets", [])

@@ -1,13 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import {
   CalendarCheck, Loader2, CheckCircle, XCircle, AlertCircle,
   Clock, ChevronRight, FileText, Scale, TrendingUp, TrendingDown,
   BookOpen, Lock, ExternalLink,
 } from 'lucide-react'
 import { api } from '@/lib/api'
-import { useAuth } from '@/contexts/AuthContext'
+import { useCompanyReady } from '@/hooks/useCompanyReady'
 
 const fmt = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
@@ -55,8 +56,7 @@ const MONTHS = ['January','February','March','April','May','June','July','August
 function monthLabel(y: number, m: number) { return `${MONTHS[m - 1]} ${y}` }
 
 export default function MonthEndPage() {
-  const { company } = useAuth()
-  const companyId = company?.id || null
+  const { companyId, companyLoading, companyMissing } = useCompanyReady()
 
   const now = new Date()
   const [selYear, setSelYear] = useState(now.getFullYear())
@@ -156,14 +156,20 @@ export default function MonthEndPage() {
 
   const isClosed = closedPeriods.some(p => p.period_start?.startsWith(`${selYear}-${String(selMonth).padStart(2, '0')}`))
 
-  if (!companyId) return (
+  if (companyLoading) return (
+    <div className="flex min-h-[60vh] items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin" style={{ color: 'var(--accent)' }} />
+    </div>
+  )
+
+  if (companyMissing) return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 text-center">
       <CalendarCheck className="h-16 w-16 mb-4" style={{ color: 'var(--text-muted)' }} />
       <h2 className="text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>No company set up</h2>
       <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>Finish onboarding to use Month-end close.</p>
-      <a href="/onboarding" className="btn btn-primary">
+      <Link href="/onboarding" className="btn btn-primary">
         Complete onboarding
-      </a>
+      </Link>
     </div>
   )
 
@@ -177,19 +183,19 @@ export default function MonthEndPage() {
           {checklist.draftInvoices?.length > 0 && (
             <div className="flex items-center justify-between text-sm px-3 py-2 rounded-lg" style={{ backgroundColor: 'rgba(239,68,68,0.08)' }}>
               <span style={{ color: '#f87171' }}>{checklist.draftInvoices.length} draft invoice(s)</span>
-              <a href="/invoices" className="text-xs font-semibold" style={{ color: 'var(--accent)' }}>Review →</a>
+              <Link href="/invoices" className="text-xs font-semibold" style={{ color: 'var(--accent)' }}>Review →</Link>
             </div>
           )}
           {checklist.draftBills?.length > 0 && (
             <div className="flex items-center justify-between text-sm px-3 py-2 rounded-lg" style={{ backgroundColor: 'rgba(239,68,68,0.08)' }}>
               <span style={{ color: '#f87171' }}>{checklist.draftBills.length} draft bill(s)</span>
-              <a href="/bills" className="text-xs font-semibold" style={{ color: 'var(--accent)' }}>Review →</a>
+              <Link href="/bills" className="text-xs font-semibold" style={{ color: 'var(--accent)' }}>Review →</Link>
             </div>
           )}
           {checklist.draftJournals?.length > 0 && (
             <div className="flex items-center justify-between text-sm px-3 py-2 rounded-lg" style={{ backgroundColor: 'rgba(239,68,68,0.08)' }}>
               <span style={{ color: '#f87171' }}>{checklist.draftJournals.length} draft journal entries</span>
-              <a href="/new-journals" className="text-xs font-semibold" style={{ color: 'var(--accent)' }}>Review →</a>
+              <Link href="/new-journals" className="text-xs font-semibold" style={{ color: 'var(--accent)' }}>Review →</Link>
             </div>
           )}
         </div>
@@ -202,7 +208,7 @@ export default function MonthEndPage() {
       description: 'Match your bank statement to journal entries.',
       status: 'info' as any,
       content: <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-        Use the <a href="/banking" className="font-semibold" style={{ color: 'var(--accent)' }}>Banking</a> section to reconcile transactions. This step is informational.
+        Use the <Link href="/banking" className="font-semibold" style={{ color: 'var(--accent)' }}>Banking</Link> section to reconcile transactions. This step is informational.
       </p>,
     },
     {
@@ -282,11 +288,11 @@ export default function MonthEndPage() {
       status: 'pending' as any,
       content: <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Review and post any adjusting entries needed for this period.</p>,
       action: (
-        <a href="/new-journals"
+        <Link href="/new-journals"
           className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-semibold transition hover:opacity-80"
           style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }}>
           <BookOpen className="w-3.5 h-3.5" /> Create Adjusting Entry
-        </a>
+        </Link>
       ),
     },
   ] : []

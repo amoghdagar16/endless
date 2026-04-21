@@ -18,19 +18,20 @@ export default function AdminLoginPage() {
 
   const ensureSignedIn = async () => {
     if (!supabase) throw new Error('Supabase auth is not configured')
+    const { data } = await supabase.auth.getSession()
+    if (data?.session?.user) return
     const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
     if (signInError) throw signInError
   }
 
   const verifyPasscode = async (code: string) => {
-    const verify = await api.post<{ token: string }>('/admin/session/verify-passcode', {
+    const verify = await api.post<{ token: string; requires_passcode_reset?: boolean }>('/admin/session/verify-passcode', {
       passcode: code,
     })
     if (!verify?.token) {
       throw new Error('Admin session token was not returned')
     }
-    localStorage.setItem('admin_session_token', verify.token)
-    router.push('/admin')
+    return verify
   }
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -42,7 +43,15 @@ export default function AdminLoginPage() {
     try {
       await ensureSignedIn()
 
-      await verifyPasscode(passcode)
+      const verify = await verifyPasscode(passcode)
+      if (verify.requires_passcode_reset) {
+        setNeedsPasscodeSetup(true)
+        setError('Temporary admin passcode accepted. Set a new admin passcode to continue.')
+        setNewPasscode('')
+        return
+      }
+      localStorage.setItem('admin_session_token', verify.token)
+      router.push('/admin')
     } catch (err: any) {
       const status = err?.response?.status
       const detail = err?.response?.data?.detail
@@ -78,7 +87,9 @@ export default function AdminLoginPage() {
     setLoading(true)
     try {
       await api.post('/admin/session/set-passcode', { passcode: newPasscode })
-      await verifyPasscode(newPasscode)
+      const verify = await verifyPasscode(newPasscode)
+      localStorage.setItem('admin_session_token', verify.token)
+      router.push('/admin')
     } catch (err: any) {
       const detail = err?.response?.data?.detail
       setError(detail || err?.message || 'Failed to set admin passcode')
@@ -138,6 +149,7 @@ export default function AdminLoginPage() {
               required
               value={passcode}
               onChange={(e) => setPasscode(e.target.value)}
+              placeholder='Temporary default: "admin"'
               className="w-full pl-9 pr-3 py-2 rounded-lg"
               style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }}
             />

@@ -60,6 +60,7 @@ export default function OnboardingPage() {
   const [mounted, setMounted] = useState(false)
   const [error, setError] = useState('')
   const initialLoadDone = useRef(false)
+  const onboardingDraftKey = user ? `fintra_onboarding_draft_${user.id}` : ''
 
   const [form, setForm] = useState({
     name: '',
@@ -83,6 +84,23 @@ export default function OnboardingPage() {
     if (initialLoadDone.current) return
     initialLoadDone.current = true
     const load = async () => {
+      // Restore local draft immediately for fast, resilient reloads.
+      if (onboardingDraftKey) {
+        try {
+          const raw = localStorage.getItem(onboardingDraftKey)
+          if (raw) {
+            const draft = JSON.parse(raw)
+            if (draft?.form) {
+              setForm(prev => ({ ...prev, ...draft.form }))
+            }
+            if (draft?.step) {
+              setStep(Math.min(Math.max(Number(draft.step), 1), 4))
+            }
+          }
+        } catch {
+          // ignore invalid draft
+        }
+      }
       try {
         const res = await api.get('/companies/')
         if (res.data?.length > 0) {
@@ -91,13 +109,31 @@ export default function OnboardingPage() {
           if (co.onboarding_completed) { router.replace('/new-dashboard'); return }
           setCompanyId(co.id)
           setForm(prev => ({ ...prev, ...co }))
-          if (co.onboarding_step) setStep(Math.min(Number(co.onboarding_step), 4))
+          if (co.onboarding_step) {
+            setStep(prev => Math.max(prev, Math.min(Number(co.onboarding_step), 4)))
+          }
         }
       } catch (e) { console.error(e) }
       finally { setInitLoading(false) }
     }
     load()
-  }, [authLoading, user])
+  }, [authLoading, user, onboardingDraftKey])
+
+  useEffect(() => {
+    if (!onboardingDraftKey || !mounted) return
+    try {
+      localStorage.setItem(
+        onboardingDraftKey,
+        JSON.stringify({
+          step,
+          form,
+          ts: Date.now(),
+        })
+      )
+    } catch {
+      // ignore storage failures
+    }
+  }, [onboardingDraftKey, step, form, mounted])
 
   const set = useCallback((k: string, v: any) => {
     setForm(p => ({ ...p, [k]: v }))
@@ -121,6 +157,34 @@ export default function OnboardingPage() {
       if (companyId) {
         await api.patch(`/companies/${companyId}`, payload)
       } else {
+        const normalizedName = (form.name || '').trim()
+        if (normalizedName) {
+          try {
+            const lookupRes = await api.get<{ data?: Array<{ id: string; onboarding_completed?: boolean }> }>(
+              '/companies/lookup',
+              { name: normalizedName }
+            )
+            const existingCompany = lookupRes?.data?.[0]
+            if (existingCompany?.id && user) {
+              // Existing company already onboarded: join and continue directly to app.
+              if (existingCompany.onboarding_completed) {
+                await api.post('/companies/request-join', {
+                  company_id: existingCompany.id,
+                  company_name: normalizedName,
+                  note: 'Requested from onboarding flow',
+                })
+                setError('Join request sent. An owner/admin will authorize your access by email.')
+                return false
+              }
+
+              await api.patch(`/users/${user.id}`, { company_id: existingCompany.id })
+              setCompanyId(existingCompany.id)
+            }
+          } catch {
+            // Fallback to normal create flow if lookup fails.
+          }
+        }
+
         const res = await api.post('/companies/', payload)
         if (res.status === 'success' && res.data?.[0]?.id) {
           const id = res.data[0].id
@@ -140,9 +204,10 @@ export default function OnboardingPage() {
     if (ok) setStep(s => s + 1)
   }
 
-  const skip = () => {
+  const skip = async () => {
     setError('')
-    setStep(s => s + 1)
+    const ok = await save(step + 1)
+    if (ok) setStep(s => s + 1)
   }
 
   const prev = () => {
@@ -154,8 +219,20 @@ export default function OnboardingPage() {
     setFinishing(true)
     const ok = await save(5, true)
     if (ok) {
+      if (user && companyId) {
+        // Ensure the authenticated user row is linked to the onboarded company.
+        // This prevents post-onboarding pages from failing auth-scoped company checks.
+        try {
+          await api.patch(`/users/${user.id}`, { company_id: companyId })
+        } catch {
+          // Non-fatal: company patch already tries to link user server-side.
+        }
+      }
+      if (onboardingDraftKey) {
+        try { localStorage.removeItem(onboardingDraftKey) } catch { /* ignore */ }
+      }
       await refreshUser()
-      router.push('/new-dashboard')
+      router.replace('/new-dashboard')
     } else {
       setFinishing(false)
     }
@@ -386,7 +463,7 @@ export default function OnboardingPage() {
                   {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : <>Continue <ArrowRight className="w-4 h-4" /></>}
                 </button>
               </div>
-              <button onClick={skip} className="w-full text-xs text-center" style={{ color: 'var(--text-muted)' }}>
+              <button onClick={skip} disabled={loading} className="w-full text-xs text-center" style={{ color: 'var(--text-muted)' }}>
                 Skip for now
               </button>
             </div>
@@ -442,7 +519,7 @@ export default function OnboardingPage() {
                   {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : <>Continue <ArrowRight className="w-4 h-4" /></>}
                 </button>
               </div>
-              <button onClick={skip} className="w-full text-xs text-center" style={{ color: 'var(--text-muted)' }}>
+              <button onClick={skip} disabled={loading} className="w-full text-xs text-center" style={{ color: 'var(--text-muted)' }}>
                 Skip for now
               </button>
             </div>

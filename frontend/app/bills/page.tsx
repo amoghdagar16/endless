@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import Link from 'next/link'
 import {
   Receipt, Loader2, Plus, X, Send, CheckCircle,
   ChevronDown, ChevronUp, UserPlus, Search,
@@ -8,7 +9,7 @@ import {
   DollarSign, AlertCircle, TrendingDown, BarChart2,
 } from 'lucide-react'
 import { api } from '@/lib/api'
-import { useAuth } from '@/contexts/AuthContext'
+import { useCompanyReady } from '@/hooks/useCompanyReady'
 
 interface Contact { id: string; display_name: string; email?: string; contact_type: string }
 interface Account { id: string; account_code: string; account_name: string; account_type: string }
@@ -35,8 +36,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function BillsPage() {
-  const { company } = useAuth()
-  const companyId = company?.id || null
+  const { companyId, companyLoading, companyMissing } = useCompanyReady()
 
   const [bills, setBills] = useState<any[]>([])
   const [vendors, setVendors] = useState<Contact[]>([])
@@ -264,20 +264,20 @@ export default function BillsPage() {
     return sortDir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
   }
 
-  if (loading) return (
+  if (companyLoading || loading) return (
     <div className="flex min-h-[60vh] items-center justify-center">
       <Loader2 className="h-8 w-8 animate-spin" style={{ color: 'var(--accent)' }} />
     </div>
   )
 
-  if (!companyId) return (
+  if (companyMissing) return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 text-center">
       <Receipt className="h-16 w-16 mb-4" style={{ color: 'var(--text-muted)' }} />
       <h2 className="text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>No company set up</h2>
       <p className="text-sm max-w-md mb-6" style={{ color: 'var(--text-secondary)' }}>Complete onboarding before creating bills.</p>
-      <a href="/onboarding" className="btn btn-primary">
+      <Link href="/onboarding" className="btn btn-primary">
         Complete onboarding
-      </a>
+      </Link>
     </div>
   )
 

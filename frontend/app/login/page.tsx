@@ -55,6 +55,10 @@ function LoginInner() {
     }
     setLoading(true)
     setError('')
+    // Let the browser paint "Signing in…" before Supabase + API work runs in this tick.
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+    })
     try {
       await signIn(formData.email, formData.password)
     } catch (err: any) {

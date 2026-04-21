@@ -12,6 +12,7 @@ from lib.admin_session import create_admin_session_token, verify_admin_session_t
 from lib.audit import purge_company_activity_logs
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
+DEFAULT_ADMIN_PASSCODE = "admin"
 
 
 class AdminPasscodeBody(BaseModel):
@@ -20,6 +21,10 @@ class AdminPasscodeBody(BaseModel):
 
 class AdminSessionValidateBody(BaseModel):
     token: str
+
+
+class AdminPasscodePolicyBody(BaseModel):
+    allow_default_admin_passcode: bool
 
 
 def _passcode_hash(company_id: str, user_id: str, passcode: str) -> str:
@@ -38,6 +43,24 @@ def _validate_admin_session_or_403(
     if payload.get("sub") != auth["user_id"] or payload.get("company_id") != auth["company_id"]:
         raise HTTPException(status_code=403, detail="Admin session does not match current user/company")
     return payload
+
+
+def _get_company_settings(company_id: str) -> Dict[str, Any]:
+    response = table("companies")\
+        .select("settings")\
+        .eq("id", company_id)\
+        .limit(1)\
+        .execute()
+    if not response.data:
+        return {}
+    settings = response.data[0].get("settings")
+    return settings if isinstance(settings, dict) else {}
+
+
+def _allow_default_passcode_for_company(company_id: str) -> bool:
+    settings = _get_company_settings(company_id)
+    # Default ON for rollout compatibility unless explicitly disabled.
+    return settings.get("allow_default_admin_passcode", True) is True
 
 
 @router.post("/session/set-passcode")
@@ -76,13 +99,30 @@ def verify_passcode(
         .eq("company_id", auth["company_id"])\
         .limit(1)\
         .execute()
-    if not existing.data:
-        raise HTTPException(status_code=404, detail="Admin passcode is not configured for this account")
-
-    stored = existing.data[0]
     expected = _passcode_hash(auth["company_id"], auth["user_id"], passcode)
-    if stored.get("passcode_hash") != expected:
-        raise HTTPException(status_code=401, detail="Invalid admin passcode")
+    default_hash = _passcode_hash(auth["company_id"], auth["user_id"], DEFAULT_ADMIN_PASSCODE)
+    used_default_passcode = passcode == DEFAULT_ADMIN_PASSCODE
+    allow_default = _allow_default_passcode_for_company(auth["company_id"])
+
+    if used_default_passcode:
+        if not allow_default:
+            raise HTTPException(status_code=401, detail="Default admin passcode is disabled for this company")
+        # Temporary fallback for existing accounts:
+        # allow "admin", then force the admin to set a new passcode.
+        table("admin_passcodes")\
+            .upsert({
+                "user_id": auth["user_id"],
+                "company_id": auth["company_id"],
+                "passcode_hash": default_hash,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }, on_conflict="user_id")\
+            .execute()
+    else:
+        if not existing.data:
+            raise HTTPException(status_code=404, detail="Admin passcode is not configured for this account")
+        stored = existing.data[0]
+        if stored.get("passcode_hash") != expected:
+            raise HTTPException(status_code=401, detail="Invalid admin passcode")
 
     token_payload = create_admin_session_token(
         user_id=auth["user_id"],
@@ -90,7 +130,7 @@ def verify_passcode(
         role=auth.get("role", "admin"),
         expires_minutes=30,
     )
-    return {"status": "success", **token_payload}
+    return {"status": "success", "requires_passcode_reset": used_default_passcode, **token_payload}
 
 
 @router.post("/session/validate")
@@ -100,6 +140,39 @@ def validate_admin_session(
 ):
     payload = _validate_admin_session_or_403(body.token, auth)
     return {"status": "success", "payload": payload}
+
+
+@router.get("/passcode-policy")
+def get_passcode_policy(
+    auth: Dict[str, str] = Depends(require_any_role("owner", "admin")),
+    x_admin_session: Optional[str] = Header(None),
+):
+    _validate_admin_session_or_403(x_admin_session, auth)
+    allow_default = _allow_default_passcode_for_company(auth["company_id"])
+    return {"status": "success", "allow_default_admin_passcode": allow_default}
+
+
+@router.patch("/passcode-policy")
+def update_passcode_policy(
+    body: AdminPasscodePolicyBody,
+    auth: Dict[str, str] = Depends(require_any_role("owner", "admin")),
+    x_admin_session: Optional[str] = Header(None),
+):
+    _validate_admin_session_or_403(x_admin_session, auth)
+    settings = _get_company_settings(auth["company_id"])
+    settings["allow_default_admin_passcode"] = body.allow_default_admin_passcode is True
+    updated = table("companies")\
+        .update({
+            "settings": settings,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        })\
+        .eq("id", auth["company_id"])\
+        .execute()
+    return {
+        "status": "success",
+        "allow_default_admin_passcode": settings["allow_default_admin_passcode"],
+        "data": updated.data,
+    }
 
 
 @router.get("/activity")

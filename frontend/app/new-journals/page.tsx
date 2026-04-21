@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import {
   Plus,
   Upload,
@@ -14,7 +15,7 @@ import {
   Trash2
 } from 'lucide-react'
 import { api } from '@/lib/api'
-import { useAuth } from '@/contexts/AuthContext'
+import { useCompanyReady } from '@/hooks/useCompanyReady'
 
 interface JournalLine {
   id: string
@@ -44,8 +45,7 @@ const createEmptyEntry = (): JournalEntry => ({
 })
 
 export default function NewJournals() {
-  const { company } = useAuth()
-  const companyId = company?.id || null
+  const { companyId, companyLoading, companyMissing } = useCompanyReady()
   const [isCreating, setIsCreating] = useState(false)
   const [journalEntry, setJournalEntry] = useState<JournalEntry>(createEmptyEntry())
   const [isOCRProcessing, setIsOCRProcessing] = useState(false)
@@ -294,7 +294,15 @@ export default function NewJournals() {
   const { totalDebit, totalCredit } = calculateTotals()
   const balanced = isBalanced()
 
-  if (!companyId) {
+  if (companyLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'var(--accent)' }} />
+      </div>
+    )
+  }
+
+  if (companyMissing) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] p-8 text-center gap-3">
         <FileText className="w-12 h-12" style={{ color: 'var(--text-muted)' }} />
@@ -302,7 +310,7 @@ export default function NewJournals() {
         <p className="text-sm max-w-sm" style={{ color: 'var(--text-secondary)' }}>
           Finish onboarding and link your company to use journals.
         </p>
-        <a href="/onboarding" className="btn btn-primary btn-sm">Complete onboarding</a>
+        <Link href="/onboarding" className="btn btn-primary btn-sm">Complete onboarding</Link>
       </div>
     )
   }
